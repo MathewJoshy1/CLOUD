@@ -615,6 +615,19 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     if (students.length === 0) {
         studentsTableEl.style.display = 'none';
         emptyStateEl.style.display = 'flex';
+        if (currentBatch === '__recycle__') {
+            emptyStateEl.innerHTML = `
+                <i class="ph ph-trash" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+                <h3>No deleted data</h3>
+                <p>Deleted student records will appear here.</p>
+            `;
+        } else {
+            emptyStateEl.innerHTML = `
+                <i class="ph ph-users" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+                <h3>No students in this class yet</h3>
+                <p>Click the "Add New Student" button to get started.</p>
+            `;
+        }
         return;
     }
 
