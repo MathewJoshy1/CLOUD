@@ -763,9 +763,12 @@ function setupEventListeners() {
         populateSubjectDropdown(defSubs);
         
         setFeesToggle('Pending');
-        document.getElementById('feesAmountPaid').value = '';
-        document.getElementById('feesDatePaid').value   = '';
-        document.getElementById('feesRemaining').value  = '';
+        const feesAmnt = document.getElementById('feesAmountPaid');
+        if (feesAmnt) feesAmnt.value = '';
+        const feesDate = document.getElementById('feesDatePaid');
+        if (feesDate) feesDate.value = '';
+        const feesRem = document.getElementById('feesRemaining');
+        if (feesRem) feesRem.value = '';
         openModal();
     });
 
