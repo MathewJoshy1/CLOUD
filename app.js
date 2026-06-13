@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword } from './config.js';
 
 const batchGroups = [
     { title: null, batches: ["+2 Science", "+2 Commerce", "+1 Science", "+1 Commerce"] },
@@ -8,16 +9,6 @@ const batchGroups = [
     { title: "STATE", batches: ["10 State", "9 State"] }
 ];
 const defaultBatches = batchGroups.flatMap(g => g.batches);
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCLISFSYBTiNpvo7H_TJ4j-LET5BsT4tiY",
-    authDomain: "christ-register.firebaseapp.com",
-    databaseURL: "https://christ-register-default-rtdb.firebaseio.com",
-    projectId: "christ-register",
-    storageBucket: "christ-register.firebasestorage.app",
-    messagingSenderId: "34439499536",
-    appId: "1:34439499536:web:759dfb61d46e07d1135f95"
-};
 
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
@@ -105,8 +96,8 @@ function init() {
     onValue(binRef, snapshot => {
         recycleBin = snapshot.val() || [];
         if (currentUserRole === 'owner') {
-            renderBatches(batchSearchEl ? batchSearchEl.value : '');
-            if (currentBatch === '__recycle__') renderRecycleBin();
+            renderBatches(batchSearchEl?.value || '');
+            if (currentBatch === '__recycle__') renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
         }
     });
 
@@ -130,16 +121,14 @@ function init() {
             defaultBatches.forEach(b => { if (!studentsData[b]) studentsData[b] = []; });
             set(dbRef, studentsData);
         }
-        renderBatches(batchSearchEl ? batchSearchEl.value : "");
-        renderTable(batchSearchEl ? batchSearchEl.value : "");
+        renderBatches(batchSearchEl?.value || "");
+        renderTable(batchSearchEl?.value || "", document.getElementById('tableSearch')?.value || "");
     });
 }
 
 let currentBatch    = 'Home';
 let currentUserRole = null;
 let currentUserId   = null;
-const OWNER_NAMES = ['Jyothis Joshy','Joshy Mathew','Mathew Joshy','Sona Joshy'];
-const OWNER_PASS  = '4511';
 
 // ─── Custom Confirm / Alert Dialog ───
 function showConfirm({ title = 'Are you sure?', message, confirmText = 'Confirm', danger = false, icon = 'ph-question' } = {}) {
@@ -436,7 +425,11 @@ function selectBatch(batch) {
     if (sidebarEl) sidebarEl.classList.remove('mobile-open');
     if (sidebarOverlay) sidebarOverlay.classList.remove('active');
     document.querySelectorAll('.batch-item').forEach(el => {
-        el.classList.toggle('active', el.textContent.trim().startsWith(batch));
+        const textSpan = el.querySelector('span[style="flex:1"]');
+        const itemName = textSpan ? textSpan.textContent.trim() : el.textContent.replace(/[0-9]+$/, '').trim();
+        if (batch === 'Home') el.classList.toggle('active', itemName === 'Home');
+        else if (batch === '__recycle__') el.classList.toggle('active', itemName === 'Recycle Bin');
+        else el.classList.toggle('active', itemName === batch);
     });
 
     // Show/hide in-table search bar
@@ -520,6 +513,17 @@ function renderTable(searchTerm = "", inClassSearch = "") {
                 students.sort((a,b) => a.name.localeCompare(b.name));
                 currentBatchTitleEl.textContent = currentBatch;
             }
+        } else if (currentBatch === '__recycle__') {
+            students = [...recycleBin];
+            if (inClassSearch.trim()) {
+                const t = inClassSearch.trim().toLowerCase();
+                students = students.filter(s =>
+                    (s.name     && s.name.toLowerCase().includes(t)) ||
+                    (s.subjects && s.subjects.toLowerCase().includes(t)) ||
+                    (s.contact  && s.contact.toLowerCase().includes(t))
+                );
+            }
+            currentBatchTitleEl.textContent = 'Recycle Bin';
         } else {
             students = [...(studentsData[currentBatch] || [])];
             // In-class search filter
@@ -590,7 +594,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     const feesCol    = `<th class="sortable" data-col="fees">Fees ${sortIndicator('fees')}</th>`;
     const waCol      = currentUserRole === 'owner' ? `<th>WhatsApp</th>` : '';
     const actionsCol = `<th style="width:100px;text-align:right;">Actions</th>`;
-    const classCol   = isAll ? `<th class="sortable" data-col="batchName">Class ${sortIndicator('batchName')}</th>` : '';
+    const classCol   = (isAll || currentBatch === '__recycle__') ? `<th class="sortable" data-col="batchName">Class ${sortIndicator('batchName')}</th>` : '';
     const noCol      = `<th class="sortable" data-col="no" style="width:80px;">No. ${sortIndicator('no')}</th>`;
     const nameCol    = `<th class="sortable" data-col="name">Student Name ${sortIndicator('name')}</th>`;
     const subCol     = `<th class="sortable" data-col="subjects">Subjects ${sortIndicator('subjects')}</th>`;
@@ -620,7 +624,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
 
     students.forEach((student, idx) => {
         const batchForAction = isAll ? student.batchName : currentBatch;
-        const displayNo      = isAll ? (idx + 1) : student.no;
+        const displayNo      = (isAll || currentBatch === '__recycle__') ? (idx + 1) : student.no;
 
         let subCount = calcSubjectCount(student.subjects);
         let cleanSub = (student.subjects || '-').replace(/\(\d+\)/g,'').trim();
@@ -629,17 +633,29 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             ? `<span class="subject-badge">${cleanSub}</span>`
             : `<span style="color:var(--text-muted)">-</span>`;
 
-        const deleteBtn = currentUserRole === 'owner'
-            ? `<button class="icon-btn delete" onclick="deleteStudent('${student.id}','${batchForAction}')"><i class="ph ph-trash"></i></button>`
-            : '';
+        let actionsHtml = '';
+        if (currentBatch === '__recycle__') {
+            actionsHtml = `
+                <button class="icon-btn restore" onclick="restoreStudent('${student.id}')" title="Restore"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                <button class="icon-btn delete" onclick="permanentDeleteStudent('${student.id}')" title="Permanent Delete"><i class="ph ph-trash"></i></button>
+            `;
+        } else {
+            const deleteBtn = currentUserRole === 'owner'
+                ? `<button class="icon-btn delete" onclick="deleteStudent('${student.id}','${batchForAction}')"><i class="ph ph-trash"></i></button>`
+                : '';
+            actionsHtml = `
+                <button class="icon-btn edit" onclick="editStudent('${student.id}','${batchForAction}')"><i class="ph ph-pencil-simple"></i></button>
+                ${deleteBtn}
+            `;
+        }
 
         // WhatsApp button — owner only
         const waBtn = currentUserRole === 'owner' && student.contact
             ? `<a href="https://wa.me/${student.contact.replace(/\D/g,'')}" target="_blank" class="icon-btn whatsapp" title="WhatsApp ${student.name}"><i class="ph ph-whatsapp-logo"></i></a>`
             : (currentUserRole === 'owner' ? `<span style="color:var(--text-muted);font-size:12px;">—</span>` : '');
 
-        const classCell = isAll
-            ? `<td><span class="class-badge">${student.batchName}</span></td>`
+        const classCell = (isAll || currentBatch === '__recycle__')
+            ? `<td><span class="class-badge">${student.batchName || student.deletedFrom}</span></td>`
             : '';
 
         const feesCell = `<td>${feesBadge(student)}</td>`;
@@ -657,8 +673,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             ${feesCell}
             ${waCell}
             <td class="action-btns" style="justify-content:flex-end;">
-                <button class="icon-btn edit" onclick="editStudent('${student.id}','${batchForAction}')"><i class="ph ph-pencil-simple"></i></button>
-                ${deleteBtn}
+                ${actionsHtml}
             </td>`;
         studentsBodyEl.appendChild(tr);
 
@@ -694,9 +709,9 @@ function setupEventListeners() {
         attemptingRole = null;
     });
 
-    loginForm?.addEventListener('submit', e => {
+    loginForm?.addEventListener('submit', async e => {
         e.preventDefault();
-        handleLogin(loginName.value.trim(), loginPassword.value);
+        await handleLogin(loginName.value.trim(), loginPassword.value);
     });
 
     // Mobile sidebar
@@ -778,9 +793,10 @@ function openLoginModal(role, title) {
     loginModal.classList.add('active');
 }
 
-function handleLogin(name, pwd) {
+async function handleLogin(name, pwd) {
     if (attemptingRole === 'owner') {
-        if (OWNER_NAMES.some(o => o.toLowerCase().replace(/\s/g,'') === name.toLowerCase().replace(/\s/g,'')) && pwd === OWNER_PASS) {
+        const hashedPwd = await hashPassword(pwd);
+        if (OWNER_NAMES.some(o => o.toLowerCase().replace(/\s/g,'') === name.toLowerCase().replace(/\s/g,'')) && hashedPwd === OWNER_PASS_HASH) {
             enterApp('owner', null);
         } else {
             showToast("Invalid Owner Name or Password.", "error");
@@ -1045,15 +1061,58 @@ window.editStudent = function(id, batch) {
 window.deleteStudent = function(id, batch) {
     if (currentUserRole !== 'owner') return;
     const tb = batch || currentBatch;
-    showConfirm({ title:'Delete Student', message:'This will permanently remove the student record. This cannot be undone.', confirmText:'Delete', danger:true, icon:'ph-trash' }).then(ok => {
+    showConfirm({ title:'Delete Student', message:'This will move the student record to the Recycle Bin.', confirmText:'Delete', danger:true, icon:'ph-trash' }).then(ok => {
         if (!ok) return;
         const idx = studentsData[tb]?.findIndex(s => s.id === id) ?? -1;
         if (idx !== -1) {
-            studentsData[tb].splice(idx, 1);
+            const [deletedStudent] = studentsData[tb].splice(idx, 1);
+            deletedStudent.deletedFrom = tb;
+            deletedStudent.deletedAt = new Date().toISOString();
+            recycleBin.push(deletedStudent);
+            
+            set(ref(db, 'recycleBin'), recycleBin);
             saveToFirebase();
             renderBatches(batchSearchEl?.value || '');
             renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
-            showToast("Student deleted.", "success");
+            showToast("Student moved to Recycle Bin.", "success");
+        }
+    });
+};
+
+window.restoreStudent = function(id) {
+    if (currentUserRole !== 'owner') return;
+    showConfirm({ title:'Restore Student', message:'Restore this student to their original class?', confirmText:'Restore', icon:'ph-arrow-counter-clockwise' }).then(ok => {
+        if (!ok) return;
+        const idx = recycleBin.findIndex(s => s.id === id);
+        if (idx !== -1) {
+            const s = recycleBin.splice(idx, 1)[0];
+            const targetBatch = s.deletedFrom;
+            delete s.deletedFrom;
+            delete s.deletedAt;
+            if (!studentsData[targetBatch]) studentsData[targetBatch] = [];
+            s.no = studentsData[targetBatch].length > 0 ? Math.max(...studentsData[targetBatch].map(x => x.no)) + 1 : 1;
+            studentsData[targetBatch].push(s);
+            
+            set(ref(db, 'recycleBin'), recycleBin);
+            saveToFirebase();
+            renderBatches(batchSearchEl?.value || '');
+            renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+            showToast("Student restored.", "success");
+        }
+    });
+};
+
+window.permanentDeleteStudent = function(id) {
+    if (currentUserRole !== 'owner') return;
+    showConfirm({ title:'Permanent Delete', message:'This will permanently delete the record. Cannot be undone.', confirmText:'Delete', danger:true, icon:'ph-trash' }).then(ok => {
+        if (!ok) return;
+        const idx = recycleBin.findIndex(s => s.id === id);
+        if (idx !== -1) {
+            recycleBin.splice(idx, 1);
+            set(ref(db, 'recycleBin'), recycleBin);
+            renderBatches(batchSearchEl?.value || '');
+            renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+            showToast("Record permanently deleted.", "success");
         }
     });
 };
