@@ -680,7 +680,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         tr.innerHTML = `
             ${classCell}
             <td><strong>${displayNo}</strong></td>
-            <td>${student.name}</td>
+            <td onclick="editStudent('${student.id}','${batchForAction}')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
             <td>${subBadge}</td>
             <td style="font-weight:600;text-align:center;">${subCount}</td>
             ${feesCell}
