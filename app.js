@@ -545,7 +545,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         students.sort((a,b) => {
             let va = a[sortCol] || '', vb = b[sortCol] || '';
             if (sortCol === 'no') { va = a.no||0; vb = b.no||0; return sortAsc ? va-vb : vb-va; }
-            if (sortCol === 'subCount') { va = calcSubjectCount(a.subjects); vb = calcSubjectCount(b.subjects); return sortAsc ? va-vb : vb-va; }
+            if (sortCol === 'subCount') { va = a.subjectCount !== undefined ? a.subjectCount : calcSubjectCount(a.subjects); vb = b.subjectCount !== undefined ? b.subjectCount : calcSubjectCount(b.subjects); return sortAsc ? va-vb : vb-va; }
             return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
         });
     }
@@ -559,7 +559,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     } else {
         statsContainer.style.display = 'flex';
         document.getElementById('statTotalStudents').textContent = students.length;
-        document.getElementById('statTotalSubjects').textContent = students.reduce((sum,s) => sum + calcSubjectCount(s.subjects), 0);
+        document.getElementById('statTotalSubjects').textContent = students.reduce((sum,s) => sum + (s.subjectCount !== undefined ? s.subjectCount : calcSubjectCount(s.subjects)), 0);
 
         const chartContainer = document.getElementById('analyticsChartContainer');
         if (chartContainer) {
@@ -639,7 +639,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         const batchForAction = isAll ? student.batchName : currentBatch;
         const displayNo      = (isAll || currentBatch === '__recycle__') ? (idx + 1) : student.no;
 
-        let subCount = calcSubjectCount(student.subjects);
+        let subCount = student.subjectCount !== undefined ? student.subjectCount : calcSubjectCount(student.subjects);
         let cleanSub = (student.subjects || '-').replace(/\(\d+\)/g,'').trim();
         if (!cleanSub || /^,+$/.test(cleanSub)) cleanSub = '-';
         const subBadge = cleanSub !== '-'
@@ -1019,6 +1019,7 @@ function saveStudent() {
 
     const name     = document.getElementById('studentName').value.trim();
     const subjects = document.getElementById('studentSubjects').value;
+    const manualSubCount = parseInt(document.getElementById('liveSubjectCount')?.value, 10) || 0;
     const contact  = document.getElementById('studentContact').value.trim();
     const fees     = document.getElementById('studentFees')?.value || 'Pending';
     const feesAmountPaid = fees === 'Paid' ? (document.getElementById('feesAmountPaid')?.value || '') : '';
@@ -1038,7 +1039,7 @@ function saveStudent() {
         no = studentsData[newBatch].length > 0 ? Math.max(...studentsData[newBatch].map(s => s.no)) + 1 : 1;
     }
 
-    studentsData[newBatch].push({ id, no, name, subjects, contact, fees, feesAmountPaid, feesDatePaid, feesRemaining });
+    studentsData[newBatch].push({ id, no, name, subjects, subjectCount: manualSubCount, contact, fees, feesAmountPaid, feesDatePaid, feesRemaining });
     saveToFirebase();
     closeModal();
     showToast(oldBatch ? "Student updated!" : "Student added!", "success");
@@ -1077,6 +1078,13 @@ window.editStudent = function(id, batch) {
     if (fd) fd.value = s.feesDatePaid || '';
     const fr = document.getElementById('feesRemaining');
     if (fr) fr.value = s.feesRemaining || '';
+    
+    // Load manual subject count (overrides automated count if present)
+    const cnt = document.getElementById('liveSubjectCount');
+    if (cnt) {
+        cnt.value = s.subjectCount !== undefined ? s.subjectCount : calcSubjectCount(s.subjects);
+    }
+
     openModal();
 };
 
@@ -1162,7 +1170,7 @@ function printCurrentView() {
 
     const rows = students.map((s, i) => {
         const cleanSub = (s.subjects || '-').replace(/\(\d+\)/g, '').trim() || '-';
-        const subCount = calcSubjectCount(s.subjects);
+        const subCount = s.subjectCount !== undefined ? s.subjectCount : calcSubjectCount(s.subjects);
         const fees     = s.fees || 'Pending';
         const feesDisplay = fees === 'Paid' && (s.feesAmountPaid || s.feesDatePaid || s.feesRemaining)
             ? `Paid${s.feesAmountPaid ? ' · ₹'+s.feesAmountPaid : ''}${s.feesRemaining && s.feesRemaining!=='0' ? ' · ₹'+s.feesRemaining+' rem.' : ''}`
