@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christ Study Centre - Admission Register</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Welcome Splash Screen -->
+<div id="splashScreen" class="splash-screen">
+    <div class="splash-content">
+        <i class="ph ph-graduation-cap splash-icon"></i>
+        <h1 class="splash-title" id="splashTitle">Welcome to Christ Study Centre</h1>
+    </div>
+</div>
+
+<!-- Gatekeeper Portal -->
+<div id="gatekeeperPortal" class="gatekeeper-portal">
+    <div class="portal-content">
+        <div class="portal-header">
+            <i class="ph ph-books"></i>
+            <h1>Christ Study Centre</h1>
+            <p>Welcome. Please select your role to continue.</p>
+        </div>
+        <div class="role-cards">
+            <div class="role-card" id="roleStudentBtn">
+                <i class="ph ph-student"></i>
+                <h3>STUDENT</h3>
+                <p>View your personal profile</p>
+            </div>
+            <div class="role-card" id="roleGuestBtn">
+                <i class="ph ph-user-plus"></i>
+                <h3>NEW ADMISSION</h3>
+                <p>New admission registration</p>
+            </div>
+            <div class="role-card" id="roleOwnerBtn">
+                <i class="ph ph-crown"></i>
+                <h3>OWNER</h3>
+                <p>Administrator access</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Login Modal -->
+<div class="portal-modal" id="loginModal">
+    <div class="portal-modal-content">
+        <h2 id="loginModalTitle">Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Registered Name</label>
+                <input type="text" id="loginName" required placeholder="Enter your exact name">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" required placeholder="Enter password">
+            </div>
+            <div class="form-actions" style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+                <button type="button" class="btn-secondary" id="cancelLoginBtn" style="width: 100%; justify-content: center;">Cancel</button>
+                <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Login <i class="ph ph-arrow-right"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Main App -->
+<div class="app-container" id="mainAppContainer" style="display: none;">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <button class="close-sidebar-btn" id="closeSidebarBtn"><i class="ph ph-x"></i></button>
+            <div class="logo-icon"><i class="ph ph-books"></i></div>
+            <div class="logo-text">
+                <h1>Christ Study Centre</h1>
+                <p>Admission Register</p>
+            </div>
+        </div>
+        <div class="sidebar-search">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="batchSearch" placeholder="Search anything...">
+        </div>
+        <nav class="batch-list" id="batchList"></nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="ph ph-list"></i></button>
+                <h2 id="currentBatchTitle">Select a Class</h2>
+                <span class="student-count" id="studentCount">0 Students</span>
+            </div>
+            <div class="header-right">
+                <button class="btn-secondary" id="printBtn" style="display:none;">
+                    <i class="ph ph-printer"></i> Print / PDF
+                </button>
+                <button class="btn-primary" id="addStudentBtn">
+                    <i class="ph ph-plus"></i> Add New Student
+                </button>
+            </div>
+        </header>
+
+        <div class="table-container">
+            <!-- In-table search bar (shown only when a specific class is selected) -->
+            <div class="table-search-bar" id="tableSearchBar" style="display:none;">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="tableSearch" placeholder="Search students in this class...">
+            </div>
+
+            <div class="stats-container" id="statsContainer" style="display: none; flex-direction: column; gap: 20px;">
+                <div style="display: flex; gap: 16px; width: 100%;">
+                    <div class="stat-box" style="flex: 1;">
+                        <span class="stat-label">Total Students:</span>
+                        <span class="stat-value animate-pulse" id="statTotalStudents">0</span>
+                    </div>
+                    <div class="stat-box" style="flex: 1;">
+                        <span class="stat-label">Total Subjects:</span>
+                        <span class="stat-value animate-pulse" id="statTotalSubjects">0</span>
+                    </div>
+                </div>
+                <div class="chart-container" id="analyticsChartContainer" style="width: 100%; height: 250px; display: none;">
+                    <canvas id="analyticsChart"></canvas>
+                </div>
+            </div>
+
+            <table id="studentsTable">
+                <thead>
+                    <tr id="tableHeaders">
+                        <th style="width: 80px;">No.</th>
+                        <th>Student Name</th>
+                        <th>Subjects</th>
+                        <th>Total Subjects</th>
+                        <th>Whatsapp Contact Number</th>
+                        <th style="width: 100px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody"></tbody>
+            </table>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="ph ph-users" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+                <h3>No students in this class yet</h3>
+                <p>Click the "Add New Student" button to get started.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Add/Edit Student Modal -->
+<div class="modal-overlay" id="studentModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add New Student</h3>
+            <button class="close-btn" id="closeModalBtn"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="studentForm">
+                <input type="hidden" id="studentId">
+                <div class="form-group">
+                    <label for="studentBatchName">Class</label>
+                    <input type="hidden" id="studentBatchName" required>
+                    <div class="custom-select" id="customBatchSelect">
+                        <div class="select-selected" id="selectSelected">Select a Class</div>
+                        <div class="select-items" id="selectItems"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="studentName">Student Name</label>
+                    <input type="text" id="studentName" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentSubjects">Subjects</label>
+                    <input type="hidden" id="studentSubjects">
+                    <div class="custom-select" id="customSubjectSelect">
+                        <div class="select-selected" id="subjectSelectSelected">Select Subjects</div>
+                        <div class="select-items" id="subjectSelectItems"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Total Number of Subjects</label>
+                    <input type="number" id="liveSubjectCount" readonly value="0"
+                        style="background-color: var(--bg-muted); cursor: not-allowed; font-weight: 600; color: var(--primary);">
+                </div>
+                <div class="form-group">
+                    <label for="studentContact">Whatsapp Contact Number</label>
+                    <input type="text" id="studentContact" placeholder="Enter Whatsapp Number">
+                </div>
+                <div class="form-group">
+                    <label>Fees Status</label>
+                    <div class="fees-toggle-row">
+                        <button type="button" class="fees-toggle-btn active" id="feesPendingBtn" data-val="Pending">
+                            <i class="ph ph-clock"></i> Pending
+                        </button>
+                        <button type="button" class="fees-toggle-btn" id="feesPaidBtn" data-val="Paid">
+                            <i class="ph ph-check-circle"></i> Paid
+                        </button>
+                    </div>
+                    <input type="hidden" id="studentFees" value="Pending">
+
+                    <!-- Paid details — shown only when Paid is selected -->
+                    <div class="fees-paid-details" id="feesPaidDetails" style="display:none;">
+                        <div class="fees-paid-row">
+                            <div class="form-group" style="margin-bottom:0;flex:1;">
+                                <label for="feesAmountPaid">Amount Paid (₹)</label>
+                                <input type="number" id="feesAmountPaid" placeholder="e.g. 3000" min="0">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;flex:1;">
+                                <label for="feesDatePaid">Date Paid</label>
+                                <input type="date" id="feesDatePaid">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="feesRemaining">Remaining Fee (₹)</label>
+                            <input type="number" id="feesRemaining" placeholder="e.g. 0" min="0">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" id="cancelModalBtn">Cancel</button>
+            <button type="submit" form="studentForm" class="btn-primary" id="saveStudentBtn">Save Student</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirm Dialog -->
+<div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon"><i class="ph ph-question"></i></div>
+        <h3 class="confirm-title" id="confirmTitle">Are you sure?</h3>
+        <p class="confirm-msg" id="confirmMsg"></p>
+        <div class="confirm-actions">
+            <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
+            <button class="btn-primary confirm-ok-btn" id="confirmOkBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Theme Toggle -->
+<button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">
+    <i class="ph ph-moon"></i>
+</button>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
