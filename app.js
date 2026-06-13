@@ -756,9 +756,12 @@ function setupEventListeners() {
         modalTitle.textContent = 'Add New Student';
         studentForm.reset();
         document.getElementById('studentId').value = '';
-        populateBatchDropdown(currentBatch !== 'Home' ? currentBatch : '');
-        const defSubs = currentBatch !== 'Home' ? defaultSubjectsFor(currentBatch) : '';
+        
+        const activeBatch = (currentBatch === 'Home' || currentBatch === '__recycle__') ? '' : currentBatch;
+        populateBatchDropdown(activeBatch);
+        const defSubs = activeBatch ? defaultSubjectsFor(activeBatch) : '';
         populateSubjectDropdown(defSubs);
+        
         setFeesToggle('Pending');
         document.getElementById('feesAmountPaid').value = '';
         document.getElementById('feesDatePaid').value   = '';
