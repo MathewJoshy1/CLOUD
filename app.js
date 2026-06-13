@@ -1071,9 +1071,12 @@ window.editStudent = function(id, batch) {
     document.getElementById('studentContact').value = s.contact || '';
     // Load fees
     setFeesToggle(s.fees || 'Pending');
-    document.getElementById('feesAmountPaid').value = s.feesAmountPaid || '';
-    document.getElementById('feesDatePaid').value   = s.feesDatePaid   || '';
-    document.getElementById('feesRemaining').value  = s.feesRemaining  || '';
+    const fa = document.getElementById('feesAmountPaid');
+    if (fa) fa.value = s.feesAmountPaid || '';
+    const fd = document.getElementById('feesDatePaid');
+    if (fd) fd.value = s.feesDatePaid || '';
+    const fr = document.getElementById('feesRemaining');
+    if (fr) fr.value = s.feesRemaining || '';
     openModal();
 };
 
