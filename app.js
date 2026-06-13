@@ -121,6 +121,22 @@ function init() {
             defaultBatches.forEach(b => { if (!studentsData[b]) studentsData[b] = []; });
             set(dbRef, studentsData);
         }
+        
+        // Auto-login via URL param
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoStudentId = urlParams.get('viewStudent');
+        if (autoStudentId && !currentUserRole) {
+            let found = null;
+            Object.values(studentsData).forEach(list => {
+                const m = list.find(s => s.id === autoStudentId);
+                if (m) found = m;
+            });
+            if (found) {
+                enterApp('student', found.id);
+                return; // enterApp calls renderBatches & renderTable
+            }
+        }
+
         renderBatches(batchSearchEl?.value || "");
         renderTable(batchSearchEl?.value || "", document.getElementById('tableSearch')?.value || "");
     });
@@ -680,7 +696,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         tr.innerHTML = `
             ${classCell}
             <td><strong>${displayNo}</strong></td>
-            <td onclick="editStudent('${student.id}','${batchForAction}')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
+            <td onclick="window.open('?viewStudent=${student.id}', '_blank')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
             <td>${subBadge}</td>
             <td style="font-weight:600;text-align:center;">${subCount}</td>
             ${feesCell}
