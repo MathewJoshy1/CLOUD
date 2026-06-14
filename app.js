@@ -489,6 +489,20 @@ function calcSubjectCount(subjectString) {
     return count;
 }
 
+// ─── Expand subject abbreviations for display ───
+function expandSubjects(subjectString) {
+    if (!subjectString || subjectString === '-') return subjectString || '-';
+    return subjectString.split(',').map(p => {
+        const trimmed = p.trim();
+        switch (trimmed.toUpperCase()) {
+            case 'PCM':  return 'Physics, Chemistry, Maths';
+            case 'PM':   return 'Physics, Maths';
+            case 'PCMB': return 'Physics, Chemistry, Maths, Biology';
+            default:     return trimmed;
+        }
+    }).join(', ');
+}
+
 // ─── Fees badge HTML ───
 function feesBadge(student) {
     const fees = student.fees || 'Pending';
@@ -1255,7 +1269,7 @@ function printCurrentView() {
     const feesBg    = f => f === 'Paid' ? '#D1FAE5' : f === 'Partial' ? '#FEF3C7' : '#FEE2E2';
 
     const rows = students.map((s, i) => {
-        const cleanSub = (s.subjects || '-').replace(/\(\d+\)/g, '').trim() || '-';
+        const cleanSub = expandSubjects((s.subjects || '-').replace(/\(\d+\)/g, '').trim() || '-');
         const subCount = s.subjectCount !== undefined ? s.subjectCount : calcSubjectCount(s.subjects);
         const fees     = s.fees || 'Pending';
         const feesDisplay = fees === 'Paid' && (s.feesAmountPaid || s.feesDatePaid || s.feesRemaining)
