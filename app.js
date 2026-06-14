@@ -137,6 +137,16 @@ function init() {
             }
         }
 
+        // Restore session from sessionStorage (survives refresh)
+        if (!currentUserRole) {
+            const savedRole = sessionStorage.getItem('userRole');
+            const savedId   = sessionStorage.getItem('userId');
+            if (savedRole) {
+                enterApp(savedRole, savedId || null);
+                return;
+            }
+        }
+
         renderBatches(batchSearchEl?.value || "");
         renderTable(batchSearchEl?.value || "", document.getElementById('tableSearch')?.value || "");
     });
@@ -429,6 +439,8 @@ function renderBatches(filter = "") {
 function logout() {
     currentUserRole = null;
     currentUserId   = null;
+    sessionStorage.removeItem('userRole');
+    sessionStorage.removeItem('userId');
     gatekeeperPortal.style.display = 'flex';
     mainAppContainer.style.display = 'none';
 }
@@ -866,6 +878,9 @@ async function handleLogin(name, pwd) {
 function enterApp(role, userId) {
     currentUserRole = role;
     currentUserId   = userId;
+    // Persist session so refresh doesn't log out
+    sessionStorage.setItem('userRole', role);
+    sessionStorage.setItem('userId',   userId || '');
     loginModal.classList.remove('active');
     gatekeeperPortal.style.display = 'none';
     mainAppContainer.style.display = '';
