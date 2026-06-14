@@ -11,6 +11,7 @@ export const firebaseConfig = {
 export const OWNER_NAMES = ['Jyothis Joshy','Joshy Mathew','Mathew Joshy','Sona Joshy'];
 // SHA-256 hash of the owner password ('4511')
 export const OWNER_PASS_HASH = 'b780f20d75afc6afe44ccc270ba7e499c070a95e6535bcc71de8aa36ced3b5b6';
+export const OWNER_WHATSAPP_NUMBER = '919747110790';
 
 export async function hashPassword(password) {
     const msgBuffer = new TextEncoder().encode(password);

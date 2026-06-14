@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword } from './config.js';
+import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword, OWNER_WHATSAPP_NUMBER } from './config.js';
 
 const batchGroups = [
     { title: null, batches: ["+2 Science", "+2 Commerce", "+1 Science", "+1 Commerce"] },
@@ -679,29 +679,30 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         }
 
         // WhatsApp button — owner only
-        const waBtn = currentUserRole === 'owner' && student.contact
-            ? `<a href="https://wa.me/${student.contact.replace(/\D/g,'')}" target="_blank" class="icon-btn whatsapp" title="WhatsApp ${student.name}"><i class="ph ph-whatsapp-logo"></i></a>`
+        const cleanContact = student.contact ? student.contact.replace(/\D/g, '') : '';
+        const waBtn = currentUserRole === 'owner' && cleanContact
+            ? `<a href="https://wa.me/${cleanContact}" target="_blank" class="icon-btn whatsapp" title="WhatsApp ${student.name}"><i class="ph ph-whatsapp-logo"></i></a>`
             : (currentUserRole === 'owner' ? `<span style="color:var(--text-muted);font-size:12px;">—</span>` : '');
 
         const classCell = (isAll || currentBatch === '__recycle__')
-            ? `<td><span class="class-badge">${student.batchName || student.deletedFrom}</span></td>`
+            ? `<td class="col-class"><span class="class-badge">${student.batchName || student.deletedFrom}</span></td>`
             : '';
 
-        const feesCell = `<td>${feesBadge(student)}</td>`;
-        const waCell   = currentUserRole === 'owner' ? `<td>${waBtn}</td>` : '';
+        const feesCell = `<td class="col-fees">${feesBadge(student)}</td>`;
+        const waCell   = currentUserRole === 'owner' ? `<td class="col-wa">${waBtn}</td>` : '';
 
         const tr = document.createElement('tr');
         tr.style.opacity = '0';
         tr.style.transform = 'translateY(10px)';
         tr.innerHTML = `
             ${classCell}
-            <td><strong>${displayNo}</strong></td>
-            <td onclick="window.open('?viewStudent=${student.id}', '_blank')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
-            <td>${subBadge}</td>
-            <td style="font-weight:600;text-align:center;">${subCount}</td>
+            <td class="col-no"><strong>${displayNo}</strong></td>
+            <td class="col-name" onclick="window.open('?viewStudent=${student.id}', '_blank')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
+            <td class="col-subjects">${subBadge}</td>
+            <td class="col-subcount" style="font-weight:600;text-align:center;">${subCount}</td>
             ${feesCell}
             ${waCell}
-            <td class="action-btns" style="justify-content:flex-end;">
+            <td class="col-actions action-btns" style="justify-content:flex-end;">
                 ${actionsHtml}
             </td>`;
         studentsBodyEl.appendChild(tr);
@@ -730,6 +731,7 @@ function setupEventListeners() {
         document.getElementById('studentId').value = '';
         populateBatchDropdown('');
         populateSubjectDropdown('');
+        configureModalFields('guest', false);
         openModal();
     });
 
@@ -785,6 +787,7 @@ function setupEventListeners() {
         if (feesDate) feesDate.value = '';
         const feesRem = document.getElementById('feesRemaining');
         if (feesRem) feesRem.value = '';
+        configureModalFields('owner', false);
         openModal();
     });
 
@@ -800,6 +803,7 @@ function setupEventListeners() {
 
     ss?.addEventListener('click', e => {
         e.stopPropagation();
+        if (document.getElementById('customBatchSelect')?.classList.contains('disabled')) return;
         sss?.classList.remove('select-arrow-active');
         if (ssi) ssi.style.display = 'none';
         ss.classList.toggle('select-arrow-active');
@@ -825,6 +829,18 @@ function openLoginModal(role, title) {
     loginModalTitle.textContent = title;
     loginName.value = '';
     loginPassword.value = '';
+    
+    const pwdGroup = loginPassword.closest('.form-group');
+    if (pwdGroup) {
+        if (role === 'student') {
+            pwdGroup.style.display = 'none';
+            loginPassword.removeAttribute('required');
+        } else {
+            pwdGroup.style.display = 'block';
+            loginPassword.setAttribute('required', 'required');
+        }
+    }
+    
     loginModal.classList.add('active');
 }
 
@@ -1034,6 +1050,7 @@ function saveStudent() {
     if (!newBatch) { showToast("Please select a Class.", "error"); return; }
 
     const name     = document.getElementById('studentName').value.trim();
+    if (!name) { showToast("Please enter a student name.", "error"); return; }
     const subjects = document.getElementById('studentSubjects').value;
     const manualSubCount = parseInt(document.getElementById('liveSubjectCount')?.value, 10) || 0;
     const contact  = document.getElementById('studentContact').value.trim();
@@ -1069,9 +1086,46 @@ function saveStudent() {
         currentBatch = 'Home';
         renderBatches(''); renderTable('');
         showToast("Registration submitted!", "success");
+
+        // Format and send registration details to owner's WhatsApp number
+        const cleanSub = subjects ? subjects.replace(/\(\d+\)/g, '').trim() : '-';
+        const formattedMsg = `*New Admission Registration* 📝\n\n` +
+                             `👤 *Name:* ${name}\n` +
+                             `🏫 *Class:* ${newBatch}\n` +
+                             `🧪 *Subjects:* ${cleanSub}\n` +
+                             `📞 *Contact:* ${contact || '-'}`;
+        const waUrl = `https://wa.me/${OWNER_WHATSAPP_NUMBER}?text=${encodeURIComponent(formattedMsg)}`;
+        window.open(waUrl, '_blank');
     } else {
         renderBatches(batchSearchEl?.value || '');
         renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+    }
+}
+
+function configureModalFields(role, isEdit) {
+    const nameInput = document.getElementById('studentName');
+    const batchSelect = document.getElementById('customBatchSelect');
+    const feesGroup = document.getElementById('feesPendingBtn')?.closest('.form-group');
+
+    if (!nameInput || !batchSelect) return;
+
+    // Reset fields to fully enabled state
+    nameInput.disabled = false;
+    batchSelect.classList.remove('disabled');
+    if (feesGroup) feesGroup.style.display = 'block';
+
+    if (role !== 'owner') {
+        if (isEdit) {
+            // Student or guest editing their own record
+            nameInput.disabled = true;
+            batchSelect.classList.add('disabled');
+            if (feesGroup) feesGroup.style.display = 'none';
+        } else {
+            // Guest/New admission registering
+            nameInput.disabled = false;
+            batchSelect.classList.remove('disabled');
+            if (feesGroup) feesGroup.style.display = 'none';
+        }
     }
 }
 
@@ -1101,6 +1155,7 @@ window.editStudent = function(id, batch) {
         cnt.value = s.subjectCount !== undefined ? s.subjectCount : calcSubjectCount(s.subjects);
     }
 
+    configureModalFields(currentUserRole || 'student', true);
     openModal();
 };
 
@@ -1163,7 +1218,7 @@ window.permanentDeleteStudent = function(id) {
     });
 };
 
-function generateId()  { return Math.random().toString(36).substr(2, 9); }
+function generateId()  { return Math.random().toString(36).substring(2, 11); }
 
 // ─── Print / PDF ───
 function printCurrentView() {
