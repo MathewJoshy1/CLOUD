@@ -682,7 +682,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         const displayNo      = (isAll || currentBatch === '__recycle__') ? (idx + 1) : student.no;
 
         let subCount = student.subjectCount !== undefined ? student.subjectCount : calcSubjectCount(student.subjects);
-        let cleanSub = (student.subjects || '-').replace(/\(\d+\)/g,'').trim();
+        let cleanSub = expandSubjects((student.subjects || '-').replace(/\(\d+\)/g,'').trim() || '-');
         if (!cleanSub || /^,+$/.test(cleanSub)) cleanSub = '-';
         const subBadge = cleanSub !== '-'
             ? `<span class="subject-badge">${cleanSub}</span>`
