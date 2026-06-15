@@ -71,6 +71,7 @@ const initialData = {
 
 let studentsData = {};
 let recycleBin   = []; // { ...studentFields, deletedFrom, deletedAt }
+let pendingAdmissions = []; // Pending admissions requiring owner approval
 
 // ─── Sort state ───
 let sortCol   = null;   // column key or null
@@ -98,6 +99,16 @@ function init() {
         if (currentUserRole === 'owner') {
             renderBatches(batchSearchEl?.value || '');
             if (currentBatch === '__recycle__') renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+        }
+    });
+
+    // Load pending admissions from Firebase
+    const pendingRef = ref(db, 'pendingAdmissions');
+    onValue(pendingRef, snapshot => {
+        pendingAdmissions = snapshot.val() || [];
+        if (currentUserRole === 'owner') {
+            renderBatches(batchSearchEl?.value || '');
+            if (currentBatch === '__pending__') renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
         }
     });
 
@@ -410,10 +421,20 @@ function renderBatches(filter = "") {
         });
     });
 
-    // Recycle Bin + Logout
+    // Recycle Bin + Logout + Pending
     const sep = document.createElement('div');
     sep.style.cssText = 'margin:20px 0;border-top:1px solid rgba(255,255,255,0.1);';
     batchListEl.appendChild(sep);
+
+    const pendingCount = (pendingAdmissions || []).length;
+    const pendingDiv = document.createElement('div');
+    pendingDiv.className = `batch-item ${currentBatch === '__pending__' ? 'active' : ''}`;
+    pendingDiv.innerHTML = `
+        <i class="ph ph-user-plus"></i>
+        <span style="flex:1">New Admissions</span>
+        ${pendingCount > 0 ? `<span class="recycle-badge" style="background:var(--success, #059669);">${pendingCount}</span>` : ''}`;
+    pendingDiv.addEventListener('click', () => selectBatch('__pending__'));
+    batchListEl.appendChild(pendingDiv);
 
     const binCount = (recycleBin || []).length;
     const binDiv = document.createElement('div');
@@ -566,6 +587,17 @@ function renderTable(searchTerm = "", inClassSearch = "") {
                 );
             }
             currentBatchTitleEl.textContent = 'Recycle Bin';
+        } else if (currentBatch === '__pending__') {
+            students = [...pendingAdmissions];
+            if (inClassSearch.trim()) {
+                const t = inClassSearch.trim().toLowerCase();
+                students = students.filter(s =>
+                    (s.name     && s.name.toLowerCase().includes(t)) ||
+                    (s.subjects && s.subjects.toLowerCase().includes(t)) ||
+                    (s.contact  && s.contact.toLowerCase().includes(t))
+                );
+            }
+            currentBatchTitleEl.textContent = 'Pending Admissions';
         } else {
             students = [...(studentsData[currentBatch] || [])];
             // In-class search filter
@@ -679,7 +711,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
 
     students.forEach((student, idx) => {
         const batchForAction = isAll ? student.batchName : currentBatch;
-        const displayNo      = (isAll || currentBatch === '__recycle__') ? (idx + 1) : student.no;
+        const displayNo      = (isAll || currentBatch === '__recycle__' || currentBatch === '__pending__') ? (idx + 1) : student.no;
 
         let subCount = student.subjectCount !== undefined ? student.subjectCount : calcSubjectCount(student.subjects);
         let cleanSub = expandSubjects((student.subjects || '-').replace(/\(\d+\)/g,'').trim() || '-');
@@ -693,6 +725,11 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             actionsHtml = `
                 <button class="icon-btn restore" onclick="restoreStudent('${student.id}')" title="Restore"><i class="ph ph-arrow-counter-clockwise"></i></button>
                 <button class="icon-btn delete" onclick="permanentDeleteStudent('${student.id}')" title="Permanent Delete"><i class="ph ph-trash"></i></button>
+            `;
+        } else if (currentBatch === '__pending__') {
+            actionsHtml = `
+                <button class="icon-btn" style="color:#059669;" onclick="acceptAdmission('${student.id}')" title="Accept"><i class="ph ph-check"></i></button>
+                <button class="icon-btn delete" onclick="rejectAdmission('${student.id}')" title="Reject"><i class="ph ph-x"></i></button>
             `;
         } else {
             const deleteBtn = currentUserRole === 'owner'
@@ -1088,6 +1125,28 @@ function saveStudent() {
     const feesDatePaid   = fees === 'Paid' ? (document.getElementById('feesDatePaid')?.value   || '') : '';
     const feesRemaining  = fees === 'Paid' ? (document.getElementById('feesRemaining')?.value  || '') : '';
 
+    if (attemptingRole === 'guest') {
+        const admissionRecord = { id, name, subjects, subjectCount: manualSubCount, contact, fees: 'Pending', batchName: newBatch, submittedAt: new Date().toISOString() };
+        pendingAdmissions.push(admissionRecord);
+        set(ref(db, 'pendingAdmissions'), pendingAdmissions);
+        closeModal();
+        showToast("Registration submitted! Pending owner approval.", "success");
+
+        // Format and send registration details to owner's WhatsApp number
+        const cleanSub = subjects ? subjects.replace(/\(\d+\)/g, '').trim() : '-';
+        const formattedMsg = `\u2728 New Admission Registration \u2728\n` +
+                             `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n` +
+                             `\uD83C\uDF93 Student: ${name}\n` +
+                             `\uD83D\uDCDA Class: ${newBatch}\n` +
+                             `\uD83D\uDCDD Subjects: ${cleanSub}\n` +
+                             `\uD83D\uDCF1 Phone: ${contact || '-'}\n` +
+                             `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`;
+        const waUrl = `https://wa.me/${OWNER_WHATSAPP_NUMBER}?text=${encodeURIComponent(formattedMsg)}`;
+        window.open(waUrl, '_blank');
+        attemptingRole = null;
+        return;
+    }
+
     if (!studentsData[newBatch]) studentsData[newBatch] = [];
 
     let oldBatch = null, oldNo = null;
@@ -1105,30 +1164,8 @@ function saveStudent() {
     saveToFirebase();
     closeModal();
     showToast(oldBatch ? "Student updated!" : "Student added!", "success");
-
-    if (attemptingRole === 'guest') {
-        currentUserRole = 'guest';
-        currentUserId   = id;
-        attemptingRole  = null;
-        gatekeeperPortal.style.display = 'none';
-        mainAppContainer.style.display = '';
-        currentBatch = 'Home';
-        renderBatches(''); renderTable('');
-        showToast("Registration submitted!", "success");
-
-        // Format and send registration details to owner's WhatsApp number
-        const cleanSub = subjects ? subjects.replace(/\(\d+\)/g, '').trim() : '-';
-        const formattedMsg = `*New Admission Registration* 📝\n\n` +
-                             `👤 *Name:* ${name}\n` +
-                             `🏫 *Class:* ${newBatch}\n` +
-                             `🧪 *Subjects:* ${cleanSub}\n` +
-                             `📞 *Contact:* ${contact || '-'}`;
-        const waUrl = `https://wa.me/${OWNER_WHATSAPP_NUMBER}?text=${encodeURIComponent(formattedMsg)}`;
-        window.open(waUrl, '_blank');
-    } else {
-        renderBatches(batchSearchEl?.value || '');
-        renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
-    }
+    renderBatches(batchSearchEl?.value || '');
+    renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
 }
 
 function configureModalFields(role, isEdit) {
@@ -1245,6 +1282,46 @@ window.permanentDeleteStudent = function(id) {
             showToast("Record permanently deleted.", "success");
         }
     });
+};
+
+window.acceptAdmission = async function(id) {
+    if (currentUserRole !== 'owner') return;
+    const idx = pendingAdmissions.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    const student = pendingAdmissions[idx];
+    
+    const ok = await showConfirm({ title: 'Accept Admission', message: `Accept admission for ${student.name} into class ${student.batchName}?`, confirmText: 'Accept' });
+    if (!ok) return;
+
+    if (!studentsData[student.batchName]) studentsData[student.batchName] = [];
+    let no = studentsData[student.batchName].length > 0 ? Math.max(...studentsData[student.batchName].map(s => s.no)) + 1 : 1;
+    
+    student.no = no;
+    delete student.submittedAt; // clean up pending metadata
+    studentsData[student.batchName].push(student);
+    
+    pendingAdmissions.splice(idx, 1);
+    
+    saveToFirebase();
+    set(ref(db, 'pendingAdmissions'), pendingAdmissions);
+    showToast("Admission accepted!", "success");
+    renderBatches(batchSearchEl?.value || '');
+    renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+};
+
+window.rejectAdmission = async function(id) {
+    if (currentUserRole !== 'owner') return;
+    const idx = pendingAdmissions.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    
+    const ok = await showConfirm({ title: 'Reject Admission', message: 'Are you sure you want to reject and delete this pending admission?', danger: true, confirmText: 'Reject', icon: 'ph-x' });
+    if (!ok) return;
+
+    pendingAdmissions.splice(idx, 1);
+    set(ref(db, 'pendingAdmissions'), pendingAdmissions);
+    showToast("Admission rejected.", "success");
+    renderBatches(batchSearchEl?.value || '');
+    renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
 };
 
 function generateId()  { return Math.random().toString(36).substring(2, 11); }
