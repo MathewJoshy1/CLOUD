@@ -3,10 +3,9 @@ import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebase
 import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword, OWNER_WHATSAPP_NUMBER } from './config.js';
 
 const batchGroups = [
-    { title: null, batches: ["+2 Science", "+2 Commerce", "+1 Science", "+1 Commerce"] },
-    { title: "CBSE",  batches: ["10 CBSE", "9 CBSE", "8 CBSE", "6 CBSE", "5 CBSE", "4 CBSE"] },
-    { title: "ICSE",  batches: ["10 ICSE", "9 ICSE", "7 ICSE"] },
-    { title: "STATE", batches: ["10 State", "9 State"] }
+    { title: "CBSE",  batches: ["12 CBSE", "11 CBSE", "10 CBSE", "9 CBSE", "8 CBSE", "7 CBSE", "6 CBSE", "5 CBSE", "4 CBSE", "3 CBSE", "2 CBSE", "1 CBSE"] },
+    { title: "ICSE",  batches: ["12 ICSE", "11 ICSE", "10 ICSE", "9 ICSE", "8 ICSE", "7 ICSE", "6 ICSE", "5 ICSE", "4 ICSE", "3 ICSE", "2 ICSE", "1 ICSE"] },
+    { title: "STATE", batches: ["12 State", "11 State", "10 State", "9 State", "8 State", "7 State", "6 State", "5 State", "4 State", "3 State", "2 State", "1 State"] }
 ];
 const defaultBatches = batchGroups.flatMap(g => g.batches);
 
@@ -14,7 +13,7 @@ const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
 
 const initialData = {
-    "+2 Science":  [
+    "12 CBSE": [
         { id:"id1",  no:1, name:"Alan Bygy",        subjects:"Physics, Chemistry, Maths", contact:"", fees:"Pending" },
         { id:"id2",  no:2, name:"Aleena Bygy",       subjects:"Physics, Chemistry, Maths", contact:"", fees:"Pending" },
         { id:"id3",  no:3, name:"Hrushikesh M",      subjects:"Physics, Chemistry, Maths", contact:"", fees:"Pending" },
@@ -22,16 +21,14 @@ const initialData = {
         { id:"id5",  no:5, name:"Alphy",             subjects:"Maths",                     contact:"", fees:"Pending" },
         { id:"id6",  no:6, name:"Sara",              subjects:"Maths",                     contact:"", fees:"Pending" },
         { id:"id7",  no:7, name:"Lea Maria Rubin",   subjects:"Maths",                     contact:"", fees:"Pending" },
-        { id:"id8",  no:8, name:"Joson",             subjects:"Physics, Chemistry",        contact:"", fees:"Pending" }
+        { id:"id8",  no:8, name:"Joson",             subjects:"Physics, Chemistry",        contact:"", fees:"Pending" },
+        { id:"id9",  no:9, name:"Aaron",    subjects:"Accountancy",                        contact:"", fees:"Pending" },
+        { id:"id10", no:10, name:"Bastin",   subjects:"Accountancy",                        contact:"", fees:"Pending" },
+        { id:"id11", no:11, name:"Leah Liju",subjects:"Accountancy",                        contact:"", fees:"Pending" },
+        { id:"id12", no:12, name:"Mia",      subjects:"Accountancy, Maths",                 contact:"", fees:"Pending" },
+        { id:"id13", no:13, name:"Iden",     subjects:"Accountancy, Business, Economics",   contact:"", fees:"Pending" }
     ],
-    "+2 Commerce": [
-        { id:"id9",  no:1, name:"Aaron",    subjects:"Accountancy",                        contact:"", fees:"Pending" },
-        { id:"id10", no:2, name:"Bastin",   subjects:"Accountancy",                        contact:"", fees:"Pending" },
-        { id:"id11", no:3, name:"Leah Liju",subjects:"Accountancy",                        contact:"", fees:"Pending" },
-        { id:"id12", no:4, name:"Mia",      subjects:"Accountancy, Maths",                 contact:"", fees:"Pending" },
-        { id:"id13", no:5, name:"Iden",     subjects:"Accountancy, Business, Economics",   contact:"", fees:"Pending" }
-    ],
-    "+1 Science": [
+    "11 CBSE": [
         { id:"id14", no:1, name:"Rihan Jobin",  subjects:"Physics, Chemistry, Maths", contact:"", fees:"Pending" },
         { id:"id15", no:2, name:"Johny (Bini)", subjects:"Physics, Chemistry, Maths", contact:"", fees:"Pending" }
     ],
@@ -117,6 +114,37 @@ function init() {
         const data = snapshot.val();
         if (data) {
             studentsData = data;
+
+            // Database Migration Logic for Class Restructuring
+            let migrated = false;
+            
+            if (studentsData['+2 Science']) {
+                if (!studentsData['12 CBSE']) studentsData['12 CBSE'] = [];
+                studentsData['+2 Science'].forEach(s => { s.no = studentsData['12 CBSE'].length + 1; studentsData['12 CBSE'].push(s); });
+                delete studentsData['+2 Science'];
+                migrated = true;
+            }
+            if (studentsData['+2 Commerce']) {
+                if (!studentsData['12 CBSE']) studentsData['12 CBSE'] = [];
+                studentsData['+2 Commerce'].forEach(s => { s.no = studentsData['12 CBSE'].length + 1; studentsData['12 CBSE'].push(s); });
+                delete studentsData['+2 Commerce'];
+                migrated = true;
+            }
+            if (studentsData['+1 Science']) {
+                if (!studentsData['11 CBSE']) studentsData['11 CBSE'] = [];
+                studentsData['+1 Science'].forEach(s => { s.no = studentsData['11 CBSE'].length + 1; studentsData['11 CBSE'].push(s); });
+                delete studentsData['+1 Science'];
+                migrated = true;
+            }
+            if (studentsData['+1 Commerce']) {
+                delete studentsData['+1 Commerce'];
+                migrated = true;
+            }
+
+            if (migrated) {
+                set(dbRef, studentsData); // Update database with migrated keys
+            }
+
             if (window.location.protocol === 'file:' && !sessionStorage.getItem('migrated')) {
                 sessionStorage.setItem('migrated', 'true');
                 const stored = localStorage.getItem('christRegisterData');
