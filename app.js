@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword, OWNER_WHATSAPP_NUMBER } from './config.js';
 
 const batchGroups = [
@@ -11,6 +12,7 @@ const defaultBatches = batchGroups.flatMap(g => g.batches);
 
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
+const storage = getStorage(app);
 
 const initialData = {
     "12 CBSE": [
@@ -823,6 +825,8 @@ function setupEventListeners() {
         modalTitle.textContent = 'New Admission Registration';
         studentForm.reset();
         document.getElementById('studentId').value = '';
+        document.getElementById('modalTabs').style.display = 'none';
+        resetTabs();
         populateBatchDropdown('');
         populateSubjectDropdown('');
         configureModalFields('guest', false);
@@ -868,6 +872,8 @@ function setupEventListeners() {
         modalTitle.textContent = 'Add New Student';
         studentForm.reset();
         document.getElementById('studentId').value = '';
+        document.getElementById('modalTabs').style.display = 'none';
+        resetTabs();
         
         const activeBatch = (currentBatch === 'Home' || currentBatch === '__recycle__') ? '' : currentBatch;
         populateBatchDropdown(activeBatch);
@@ -1262,8 +1268,234 @@ window.editStudent = function(id, batch) {
     }
 
     configureModalFields(currentUserRole || 'student', true);
+    
+    // Show tabs for existing students
+    document.getElementById('modalTabs').style.display = 'flex';
+    resetTabs();
+    
+    // Controls visibility based on role
+    document.getElementById('ownerMarksControls').style.display = currentUserRole === 'owner' ? 'block' : 'none';
+    document.getElementById('ownerDocControls').style.display = currentUserRole === 'owner' ? 'block' : 'none';
+    
+    renderMarks(tb, s.id);
+    renderDocuments(tb, s.id);
+
     openModal();
 };
+
+function resetTabs() {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.fontWeight = '500';
+        b.style.color = 'var(--text-muted)';
+        b.style.borderBottom = 'none';
+    });
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.remove('active');
+        c.style.display = 'none';
+    });
+    const firstBtn = document.querySelector('.tab-btn[data-tab="tabBasicInfo"]');
+    if (firstBtn) {
+        firstBtn.classList.add('active');
+        firstBtn.style.fontWeight = '600';
+        firstBtn.style.color = 'var(--primary)';
+        firstBtn.style.borderBottom = '2px solid var(--primary)';
+    }
+    const firstContent = document.getElementById('tabBasicInfo');
+    if (firstContent) {
+        firstContent.classList.add('active');
+        firstContent.style.display = 'block';
+    }
+}
+
+// Attach Tab switching logic
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.fontWeight = '500';
+            b.style.color = 'var(--text-muted)';
+            b.style.borderBottom = 'none';
+        });
+        document.querySelectorAll('.tab-content').forEach(c => {
+            c.classList.remove('active');
+            c.style.display = 'none';
+        });
+        
+        btn.classList.add('active');
+        btn.style.fontWeight = '600';
+        btn.style.color = 'var(--primary)';
+        btn.style.borderBottom = '2px solid var(--primary)';
+        
+        const content = document.getElementById(btn.getAttribute('data-tab'));
+        if (content) {
+            content.classList.add('active');
+            content.style.display = 'block';
+        }
+    });
+});
+
+// MARKS LOGIC
+window.addMark = function(batch, studentId) {
+    if (currentUserRole !== 'owner') return;
+    const exam = document.getElementById('markExamName').value.trim();
+    const subject = document.getElementById('markSubject').value.trim();
+    const score = document.getElementById('markScore').value.trim();
+    if (!exam || !subject || !score) { showToast("Please fill all mark fields", "error"); return; }
+    
+    const student = studentsData[batch]?.find(s => s.id === studentId);
+    if (!student) return;
+    if (!student.marks) student.marks = [];
+    student.marks.push({ id: generateId(), exam, subject, score, date: new Date().toISOString() });
+    
+    saveToFirebase();
+    document.getElementById('markExamName').value = '';
+    document.getElementById('markSubject').value = '';
+    document.getElementById('markScore').value = '';
+    renderMarks(batch, studentId);
+    showToast("Mark added", "success");
+};
+
+window.deleteMark = function(batch, studentId, markId) {
+    if (currentUserRole !== 'owner') return;
+    const student = studentsData[batch]?.find(s => s.id === studentId);
+    if (!student || !student.marks) return;
+    student.marks = student.marks.filter(m => m.id !== markId);
+    saveToFirebase();
+    renderMarks(batch, studentId);
+    showToast("Mark deleted", "success");
+};
+
+function renderMarks(batch, studentId) {
+    const tbody = document.getElementById('marksListBody');
+    const emptyState = document.getElementById('emptyMarks');
+    const student = studentsData[batch]?.find(s => s.id === studentId);
+    tbody.innerHTML = '';
+    
+    if (!student || !student.marks || student.marks.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+    
+    student.marks.forEach(m => {
+        const tr = document.createElement('tr');
+        const delBtn = currentUserRole === 'owner' ? `<button class="icon-btn delete" onclick="deleteMark('${batch}', '${studentId}', '${m.id}')"><i class="ph ph-trash"></i></button>` : '';
+        tr.innerHTML = `
+            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color);">${m.exam}</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color);">${m.subject}</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color); font-weight: 600;">${m.score}</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color); text-align: right;">${delBtn}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+document.getElementById('addMarkBtn')?.addEventListener('click', () => {
+    const batch = document.getElementById('studentBatchName').value;
+    const id = document.getElementById('studentId').value;
+    if (id && batch) addMark(batch, id);
+});
+
+// DOCUMENTS LOGIC
+window.uploadDoc = async function(batch, studentId) {
+    if (currentUserRole !== 'owner') return;
+    const title = document.getElementById('docName').value.trim();
+    const fileInput = document.getElementById('docFile');
+    if (!title || fileInput.files.length === 0) { showToast("Provide a title and select a file", "error"); return; }
+    
+    const file = fileInput.files[0];
+    const btn = document.getElementById('uploadDocBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i>';
+    
+    try {
+        const ext = file.name.split('.').pop();
+        const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const path = `students/${studentId}/${safeTitle}_${Date.now()}.${ext}`;
+        const sRef = storageRef(storage, path);
+        
+        await uploadBytes(sRef, file);
+        const url = await getDownloadURL(sRef);
+        
+        const student = studentsData[batch]?.find(s => s.id === studentId);
+        if (student) {
+            if (!student.documents) student.documents = [];
+            student.documents.push({ id: generateId(), title, url, path, uploadedAt: new Date().toISOString() });
+            saveToFirebase();
+            renderDocuments(batch, studentId);
+            showToast("Document uploaded", "success");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Upload failed", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph ph-upload-simple"></i>';
+        document.getElementById('docName').value = '';
+        fileInput.value = '';
+    }
+};
+
+window.deleteDoc = async function(batch, studentId, docId, docPath) {
+    if (currentUserRole !== 'owner') return;
+    if (!confirm("Delete this document?")) return;
+    
+    try {
+        const sRef = storageRef(storage, docPath);
+        await deleteObject(sRef);
+        
+        const student = studentsData[batch]?.find(s => s.id === studentId);
+        if (student && student.documents) {
+            student.documents = student.documents.filter(d => d.id !== docId);
+            saveToFirebase();
+            renderDocuments(batch, studentId);
+            showToast("Document deleted", "success");
+        }
+    } catch(e) {
+        console.error(e);
+        showToast("Failed to delete", "error");
+    }
+};
+
+function renderDocuments(batch, studentId) {
+    const list = document.getElementById('documentsList');
+    const emptyState = document.getElementById('emptyDocs');
+    const student = studentsData[batch]?.find(s => s.id === studentId);
+    list.innerHTML = '';
+    
+    if (!student || !student.documents || student.documents.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+    
+    student.documents.forEach(d => {
+        const item = document.createElement('div');
+        item.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card);";
+        
+        const delBtn = currentUserRole === 'owner' ? `<button class="icon-btn delete" onclick="deleteDoc('${batch}', '${studentId}', '${d.id}', '${d.path}')" style="margin-left:8px;"><i class="ph ph-trash"></i></button>` : '';
+        
+        item.innerHTML = `
+            <div style="display:flex; align-items:center; gap: 12px;">
+                <i class="ph ph-file-text" style="font-size:24px; color:var(--primary);"></i>
+                <span style="font-weight: 500; color: var(--text-main);">${d.title}</span>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <a href="${d.url}" target="_blank" class="icon-btn" style="color:var(--primary);" title="Download"><i class="ph ph-download-simple"></i></a>
+                ${delBtn}
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+document.getElementById('uploadDocBtn')?.addEventListener('click', () => {
+    const batch = document.getElementById('studentBatchName').value;
+    const id = document.getElementById('studentId').value;
+    if (id && batch) uploadDoc(batch, id);
+});
 
 window.deleteStudent = function(id, batch) {
     if (currentUserRole !== 'owner') return;
