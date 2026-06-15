@@ -632,9 +632,10 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             if (inClassSearch.trim()) {
                 const t = inClassSearch.trim().toLowerCase();
                 students = students.filter(s =>
-                    (s.name     && s.name.toLowerCase().includes(t)) ||
-                    (s.subjects && s.subjects.toLowerCase().includes(t)) ||
-                    (s.contact  && s.contact.toLowerCase().includes(t))
+                    (s.name       && s.name.toLowerCase().includes(t)) ||
+                    (s.schoolName && s.schoolName.toLowerCase().includes(t)) ||
+                    (s.subjects   && s.subjects.toLowerCase().includes(t)) ||
+                    (s.contact    && s.contact.toLowerCase().includes(t))
                 );
             }
             students.sort((a,b) => a.no - b.no);
@@ -699,10 +700,11 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     const classCol   = (isAll || currentBatch === '__recycle__') ? `<th class="sortable" data-col="batchName">Class ${sortIndicator('batchName')}</th>` : '';
     const noCol      = `<th class="sortable" data-col="no" style="width:80px;">No. ${sortIndicator('no')}</th>`;
     const nameCol    = `<th class="sortable" data-col="name">Student Name ${sortIndicator('name')}</th>`;
+    const schoolCol  = `<th class="sortable" data-col="schoolName">School Name ${sortIndicator('schoolName')}</th>`;
     const subCol     = `<th class="sortable" data-col="subjects">Subjects ${sortIndicator('subjects')}</th>`;
     const subCntCol  = `<th class="sortable" data-col="subCount">Total Subj. ${sortIndicator('subCount')}</th>`;
 
-    tableHeaders.innerHTML = classCol + noCol + nameCol + subCol + subCntCol + feesCol + waCol + actionsCol;
+    tableHeaders.innerHTML = classCol + noCol + nameCol + schoolCol + subCol + subCntCol + feesCol + waCol + actionsCol;
 
     // Attach sort click handlers
     tableHeaders.querySelectorAll('.sortable').forEach(th => {
@@ -789,6 +791,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             ${classCell}
             <td class="col-no"><strong>${displayNo}</strong></td>
             <td class="col-name" onclick="window.open('?viewStudent=${student.id}', '_blank')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
+            <td class="col-school">${student.schoolName || '-'}</td>
             <td class="col-subjects">${subBadge}</td>
             <td class="col-subcount" style="font-weight:600;text-align:center;">${subCount}</td>
             ${feesCell}
@@ -1143,18 +1146,25 @@ function saveStudent() {
     const newBatch = document.getElementById('studentBatchName').value;
     if (!newBatch) { showToast("Please select a Class.", "error"); return; }
 
-    const name     = document.getElementById('studentName').value.trim();
-    if (!name) { showToast("Please enter a student name.", "error"); return; }
+    const name       = document.getElementById('studentName').value.trim();
+    const schoolName = document.getElementById('schoolName').value.trim();
+    const contact    = document.getElementById('studentContact').value.trim();
+
+    if (attemptingRole === 'guest') {
+        if (!name || !schoolName || !contact) { showToast("Please fill in Student Name, School Name, and Whatsapp Contact.", "error"); return; }
+    } else {
+        if (!name || !schoolName || !contact) { showToast("Student Name, School Name, and Contact are mandatory.", "error"); return; }
+    }
+
     const subjects = document.getElementById('studentSubjects').value;
     const manualSubCount = parseInt(document.getElementById('liveSubjectCount')?.value, 10) || 0;
-    const contact  = document.getElementById('studentContact').value.trim();
     const fees     = document.getElementById('studentFees')?.value || 'Pending';
     const feesAmountPaid = fees === 'Paid' ? (document.getElementById('feesAmountPaid')?.value || '') : '';
     const feesDatePaid   = fees === 'Paid' ? (document.getElementById('feesDatePaid')?.value   || '') : '';
     const feesRemaining  = fees === 'Paid' ? (document.getElementById('feesRemaining')?.value  || '') : '';
 
     if (attemptingRole === 'guest') {
-        const admissionRecord = { id, name, subjects, subjectCount: manualSubCount, contact, fees: 'Pending', batchName: newBatch, submittedAt: new Date().toISOString() };
+        const admissionRecord = { id, name, schoolName, subjects, subjectCount: manualSubCount, contact, fees: 'Pending', batchName: newBatch, submittedAt: new Date().toISOString() };
         pendingAdmissions.push(admissionRecord);
         set(ref(db, 'pendingAdmissions'), pendingAdmissions);
         closeModal();
@@ -1165,6 +1175,7 @@ function saveStudent() {
         const formattedMsg = `New Admission Registration\n` +
                              `--------------------------------------------------\n` +
                              `Student: ${name}\n` +
+                             `School: ${schoolName}\n` +
                              `Class: ${newBatch}\n` +
                              `Subjects: ${cleanSub}\n` +
                              `Phone: ${contact || '-'}\n` +
@@ -1188,7 +1199,7 @@ function saveStudent() {
         no = studentsData[newBatch].length > 0 ? Math.max(...studentsData[newBatch].map(s => s.no)) + 1 : 1;
     }
 
-    studentsData[newBatch].push({ id, no, name, subjects, subjectCount: manualSubCount, contact, fees, feesAmountPaid, feesDatePaid, feesRemaining });
+    studentsData[newBatch].push({ id, no, name, schoolName, subjects, subjectCount: manualSubCount, contact, fees, feesAmountPaid, feesDatePaid, feesRemaining });
     saveToFirebase();
     closeModal();
     showToast(oldBatch ? "Student updated!" : "Student added!", "success");
@@ -1232,6 +1243,7 @@ window.editStudent = function(id, batch) {
     document.getElementById('studentId').value      = s.id;
     populateBatchDropdown(tb);
     document.getElementById('studentName').value    = s.name;
+    document.getElementById('schoolName').value     = s.schoolName || '';
     populateSubjectDropdown(s.subjects);
     document.getElementById('studentContact').value = s.contact || '';
     // Load fees
