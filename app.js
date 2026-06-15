@@ -1134,13 +1134,13 @@ function saveStudent() {
 
         // Format and send registration details to owner's WhatsApp number
         const cleanSub = subjects ? subjects.replace(/\(\d+\)/g, '').trim() : '-';
-        const formattedMsg = `\u2728 New Admission Registration \u2728\n` +
-                             `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n` +
-                             `\uD83C\uDF93 Student: ${name}\n` +
-                             `\uD83D\uDCDA Class: ${newBatch}\n` +
-                             `\uD83D\uDCDD Subjects: ${cleanSub}\n` +
-                             `\uD83D\uDCF1 Phone: ${contact || '-'}\n` +
-                             `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`;
+        const formattedMsg = `New Admission Registration\n` +
+                             `--------------------------------------------------\n` +
+                             `Student: ${name}\n` +
+                             `Class: ${newBatch}\n` +
+                             `Subjects: ${cleanSub}\n` +
+                             `Phone: ${contact || '-'}\n` +
+                             `--------------------------------------------------`;
         const waUrl = `https://wa.me/${OWNER_WHATSAPP_NUMBER}?text=${encodeURIComponent(formattedMsg)}`;
         window.open(waUrl, '_blank');
         attemptingRole = null;
