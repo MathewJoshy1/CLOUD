@@ -804,8 +804,10 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             <td class="col-subcount" style="font-weight:600;text-align:center;">${subCount}</td>
             ${feesCell}
             ${waCell}
-            <td class="col-actions action-btns" style="justify-content:flex-end;" onclick="event.stopPropagation()">
-                ${actionsHtml}
+            <td class="col-actions" style="text-align: right;" onclick="event.stopPropagation()">
+                <div class="action-btns" style="justify-content: flex-end;">
+                    ${actionsHtml}
+                </div>
             </td>`;
         studentsBodyEl.appendChild(tr);
 
