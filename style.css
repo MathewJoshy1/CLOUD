@@ -677,6 +677,51 @@ tbody tr:hover {
     box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
 }
 
+/* Inline Inputs for Expanding Rows */
+.inline-input {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s;
+    outline: none;
+    background-color: var(--bg-card);
+    color: var(--text-main);
+}
+.inline-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+}
+.inline-file-input {
+    padding: 6px 10px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text-main);
+    background-color: var(--bg-body);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.inline-file-input:hover {
+    border-color: var(--primary);
+    background-color: rgba(79,70,229,0.02);
+}
+.inline-file-input::file-selector-button {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: var(--text-main);
+    cursor: pointer;
+    margin-right: 12px;
+    transition: 0.2s;
+}
+.inline-file-input::file-selector-button:hover {
+    background-color: var(--border-color);
+}
+
 /* Custom Select */
 .custom-select { position: relative; width: 100%; }
 
@@ -1223,6 +1268,37 @@ tbody tr:hover {
 }
 
 .table-search-bar input::placeholder { color: var(--text-muted); }
+
+/* ─── Expanding Row / Dashboard Cards ─── */
+.main-student-row {
+    transition: background-color 0.2s;
+}
+.main-student-row:hover {
+    background-color: var(--bg-hover) !important;
+}
+.expanded-row td {
+    padding: 0;
+    overflow: hidden;
+}
+.expanded-content {
+    animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.expanded-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.expanded-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
+}
 
 /* ─── Fees badge ─── */
 .fees-badge {

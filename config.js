@@ -3,7 +3,7 @@ export const firebaseConfig = {
     authDomain: "christ-register.firebaseapp.com",
     databaseURL: "https://christ-register-default-rtdb.firebaseio.com",
     projectId: "christ-register",
-    storageBucket: "christ-register.firebasestorage.app",
+    storageBucket: "christ-register.appspot.com",
     messagingSenderId: "34439499536",
     appId: "1:34439499536:web:759dfb61d46e07d1135f95"
 };

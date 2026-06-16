@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -130,20 +130,33 @@
                 </div>
             </div>
 
-            <table id="studentsTable">
-                <thead>
-                    <tr id="tableHeaders">
-                        <th style="width: 80px;">No.</th>
-                        <th>Student Name</th>
-                        <th class="col-school">School Name</th>
-                        <th>Subjects</th>
-                        <th>Total Subjects</th>
-                        <th>Whatsapp Contact Number</th>
-                        <th style="width: 100px; text-align: right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="studentsBody"></tbody>
-            </table>
+            <!-- Data Table -->
+            <div class="table-container">
+                <table class="data-table" id="studentsTable">
+                    <thead>
+                        <tr id="tableHeaders">
+                            <th class="col-class">Class</th>
+                            <th class="col-no">No.</th>
+                            <th class="col-name">Student Name</th>
+                            <th class="col-school">School Name</th>
+                            <th class="col-subjects">Subjects</th>
+                            <th class="col-subcount">Total Subj.</th>
+                            <th class="col-fees">Fees</th>
+                            <th class="col-wa"></th>
+                            <th class="col-actions" style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsBody">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <!-- Handled via JS -->
+                </div>
+            </div>
+            
+            <!-- Student Dashboard Widgets -->
+            <div id="studentDashboardWidgets" style="margin-top: 24px; display: none; gap: 24px; flex-wrap: wrap;"></div>
 
             <div class="empty-state" id="emptyState" style="display: none;">
                 <i class="ph ph-users" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
@@ -157,19 +170,11 @@
 <!-- Add/Edit Student Modal -->
 <div class="modal-overlay" id="studentModal">
     <div class="modal">
-        <div class="modal-header" style="flex-direction: column; align-items: stretch; gap: 16px; padding-bottom: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 id="modalTitle">Add New Student</h3>
-                <button class="close-btn" id="closeModalBtn"><i class="ph ph-x"></i></button>
-            </div>
-            <div class="modal-tabs" id="modalTabs" style="display: none; border-bottom: 1px solid var(--border-color); display: flex; gap: 16px;">
-                <button class="tab-btn active" data-tab="tabBasicInfo" style="background:none; border:none; padding: 8px 0; cursor:pointer; font-weight:600; color:var(--primary); border-bottom: 2px solid var(--primary);">Basic Info</button>
-                <button class="tab-btn" data-tab="tabMarks" style="background:none; border:none; padding: 8px 0; cursor:pointer; font-weight:500; color:var(--text-muted);">Marks</button>
-                <button class="tab-btn" data-tab="tabDocuments" style="background:none; border:none; padding: 8px 0; cursor:pointer; font-weight:500; color:var(--text-muted);">Documents</button>
-            </div>
+        <div class="modal-header">
+            <h3 id="modalTitle">Add New Student</h3>
+            <button class="close-btn" id="closeModalBtn"><i class="ph ph-x"></i></button>
         </div>
         <div class="modal-body">
-            <div id="tabBasicInfo" class="tab-content active">
             <form id="studentForm">
                 <input type="hidden" id="studentId">
                 <div class="form-group">
@@ -235,52 +240,6 @@
                     </div>
                 </div>
             </form>
-            </div>
-
-            <!-- Marks Tab -->
-            <div id="tabMarks" class="tab-content" style="display: none;">
-                <div id="ownerMarksControls" style="margin-bottom: 20px; display: none;">
-                    <label style="font-size: 13px; font-weight: 500; color: var(--text-main); margin-bottom: 8px; display: block;">Add Exam Mark</label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <input type="text" id="markExamName" placeholder="Exam (e.g. Midterms)" style="flex: 1; min-width: 120px;" class="form-group input">
-                        <input type="text" id="markSubject" placeholder="Subject" style="flex: 1; min-width: 100px;" class="form-group input">
-                        <input type="text" id="markScore" placeholder="Score (e.g. 85/100)" style="flex: 1; min-width: 100px;" class="form-group input">
-                        <button type="button" class="btn-primary" id="addMarkBtn" style="padding: 10px 16px;"><i class="ph ph-plus"></i></button>
-                    </div>
-                </div>
-                <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 10px;">
-                    <thead>
-                        <tr>
-                            <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">Exam</th>
-                            <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">Subject</th>
-                            <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">Score</th>
-                            <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); width: 40px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="marksListBody"></tbody>
-                </table>
-                <div id="emptyMarks" class="empty-state" style="padding: 20px; display: none;">
-                    <i class="ph ph-chart-bar" style="font-size: 32px; color: var(--text-muted); margin-bottom: 8px;"></i>
-                    <p style="margin: 0; font-size: 14px;">No marks recorded yet.</p>
-                </div>
-            </div>
-
-            <!-- Documents Tab -->
-            <div id="tabDocuments" class="tab-content" style="display: none;">
-                <div id="ownerDocControls" style="margin-bottom: 20px; display: none;">
-                    <label style="font-size: 13px; font-weight: 500; color: var(--text-main); margin-bottom: 8px; display: block;">Upload Document</label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <input type="text" id="docName" placeholder="Document Title (e.g. 10th Marksheet)" style="flex: 1; min-width: 150px;" class="form-group input">
-                        <input type="file" id="docFile" style="flex: 1; min-width: 150px; padding: 6px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                        <button type="button" class="btn-primary" id="uploadDocBtn" style="padding: 10px 16px;"><i class="ph ph-upload-simple"></i></button>
-                    </div>
-                </div>
-                <div id="documentsList" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
-                <div id="emptyDocs" class="empty-state" style="padding: 20px; display: none;">
-                    <i class="ph ph-file-pdf" style="font-size: 32px; color: var(--text-muted); margin-bottom: 8px;"></i>
-                    <p style="margin: 0; font-size: 14px;">No documents uploaded yet.</p>
-                </div>
-            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn-secondary" id="cancelModalBtn">Cancel</button>
@@ -312,6 +271,11 @@
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module" src="app.js?v=2"></script>
+<script>
+  const appScript = document.createElement('script');
+  appScript.type = 'module';
+  appScript.src = 'app.js?v=' + new Date().getTime();
+  document.body.appendChild(appScript);
+</script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword, OWNER_WHATSAPP_NUMBER } from './config.js';
+import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword, OWNER_WHATSAPP_NUMBER } from './config.js?v=2';
 
 const batchGroups = [
     { title: "CBSE",  batches: ["12 CBSE", "11 CBSE", "10 CBSE", "9 CBSE", "8 CBSE", "7 CBSE", "6 CBSE", "5 CBSE", "4 CBSE", "3 CBSE", "2 CBSE", "1 CBSE"] },
@@ -581,11 +581,9 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         Object.keys(studentsData).forEach(bn => {
             studentsData[bn].forEach(s => { if (s.id === currentUserId) students.push({...s, batchName: bn}); });
         });
-        // Warm welcome greeting using student's first name
-        const studentName = students.length > 0 ? students[0].name.split(' ')[0] : '';
-        const hour = new Date().getHours();
-        const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-        currentBatchTitleEl.innerHTML = `${greeting}, <span class="greeting-name">${studentName}</span> <span class="greeting-wave">👋</span>`;
+        // Show student's full name without greeting
+        const studentFullName = students.length > 0 ? students[0].name : '';
+        currentBatchTitleEl.innerHTML = `<span class="greeting-name">${studentFullName}</span>`;
         if (addStudentBtn) addStudentBtn.style.display = 'none';
     } else {
         if (addStudentBtn) addStudentBtn.style.display = 'flex';
@@ -696,15 +694,15 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     };
 
     // Fees column visible to all; WhatsApp only to owner
-    const feesCol    = `<th class="sortable" data-col="fees">Fees ${sortIndicator('fees')}</th>`;
-    const waCol      = currentUserRole === 'owner' ? `<th>WhatsApp</th>` : '';
-    const actionsCol = `<th style="width:100px;text-align:right;">Actions</th>`;
-    const classCol   = (isAll || currentBatch === '__recycle__') ? `<th class="sortable" data-col="batchName">Class ${sortIndicator('batchName')}</th>` : '';
-    const noCol      = `<th class="sortable" data-col="no" style="width:80px;">No. ${sortIndicator('no')}</th>`;
-    const nameCol    = `<th class="sortable" data-col="name">Student Name ${sortIndicator('name')}</th>`;
-    const schoolCol  = `<th class="sortable" data-col="schoolName">School Name ${sortIndicator('schoolName')}</th>`;
-    const subCol     = `<th class="sortable" data-col="subjects">Subjects ${sortIndicator('subjects')}</th>`;
-    const subCntCol  = `<th class="sortable" data-col="subCount">Total Subj. ${sortIndicator('subCount')}</th>`;
+    const feesCol    = `<th class="sortable col-fees" data-col="fees">Fees ${sortIndicator('fees')}</th>`;
+    const waCol      = currentUserRole === 'owner' ? `<th class="col-wa"></th>` : '';
+    const actionsCol = `<th class="col-actions" style="text-align:right;">Actions</th>`;
+    const classCol   = (isAll || currentBatch === '__recycle__') ? `<th class="sortable col-class" data-col="batchName">Class ${sortIndicator('batchName')}</th>` : '';
+    const noCol      = `<th class="sortable col-no" data-col="no">No. ${sortIndicator('no')}</th>`;
+    const nameCol    = `<th class="sortable col-name" data-col="name">Student Name ${sortIndicator('name')}</th>`;
+    const schoolCol  = `<th class="sortable col-school" data-col="schoolName">School Name ${sortIndicator('schoolName')}</th>`;
+    const subCol     = `<th class="sortable col-subjects" data-col="subjects">Subjects ${sortIndicator('subjects')}</th>`;
+    const subCntCol  = `<th class="sortable col-subcount" data-col="subCount">Total Subj. ${sortIndicator('subCount')}</th>`;
 
     tableHeaders.innerHTML = classCol + noCol + nameCol + schoolCol + subCol + subCntCol + feesCol + waCol + actionsCol;
 
@@ -789,19 +787,63 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         const tr = document.createElement('tr');
         tr.style.opacity = '0';
         tr.style.transform = 'translateY(10px)';
+        tr.style.cursor = currentUserRole === 'owner' ? 'pointer' : 'default';
+        tr.className = 'main-student-row';
         tr.innerHTML = `
             ${classCell}
             <td class="col-no"><strong>${displayNo}</strong></td>
-            <td class="col-name" onclick="window.open('?viewStudent=${student.id}', '_blank')" style="color: var(--primary-color); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;">${student.name}</td>
+            <td class="col-name" style="font-weight: 600; color: var(--text-main);">${student.name}</td>
             <td class="col-school">${student.schoolName || '-'}</td>
             <td class="col-subjects">${subBadge}</td>
             <td class="col-subcount" style="font-weight:600;text-align:center;">${subCount}</td>
             ${feesCell}
             ${waCell}
-            <td class="col-actions action-btns" style="justify-content:flex-end;">
+            <td class="col-actions action-btns" style="justify-content:flex-end;" onclick="event.stopPropagation()">
                 ${actionsHtml}
             </td>`;
         studentsBodyEl.appendChild(tr);
+
+        if (currentUserRole === 'owner') {
+            const expandTr = document.createElement('tr');
+            expandTr.className = 'expanded-row';
+            expandTr.style.display = 'none';
+            expandTr.innerHTML = `
+                <td colspan="10" style="padding: 0; background: var(--bg-body); border-bottom: 2px solid var(--border-color);">
+                    <div class="expanded-content" id="expanded_${student.id}" style="padding: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
+                        <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                            <h4 style="margin-bottom: 16px; color: var(--text-main); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-chart-line-up" style="color:var(--primary);margin-right:8px;"></i>Marks</h4>
+                            <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                                <input type="text" id="markExam_${student.id}" placeholder="Exam (e.g. Midterms)" style="flex: 1; min-width: 100px;" class="inline-input">
+                                <input type="text" id="markSubj_${student.id}" placeholder="Subject" style="flex: 1; min-width: 100px;" class="inline-input">
+                                <input type="text" id="markScore_${student.id}" placeholder="Score" style="width: 70px;" class="inline-input">
+                                <button class="btn-primary" onclick="addMarkDirect('${batchForAction}', '${student.id}')" style="padding: 8px 16px; flex-shrink: 0;"><i class="ph ph-plus"></i></button>
+                            </div>
+                            <div id="marksList_${student.id}"></div>
+                        </div>
+                        <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                            <h4 style="margin-bottom: 16px; color: var(--text-main); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-folder" style="color:var(--primary);margin-right:8px;"></i>Documents</h4>
+                            <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                                <input type="text" id="docName_${student.id}" placeholder="Doc Title" style="flex: 1; min-width: 120px;" class="inline-input">
+                                <input type="file" id="docFile_${student.id}" class="inline-file-input" style="flex: 1; min-width: 150px; max-width: 100%;">
+                                <button class="btn-primary" id="btnDoc_${student.id}" onclick="uploadDocDirect('${batchForAction}', '${student.id}')" style="padding: 8px 16px; flex-shrink: 0;"><i class="ph ph-upload-simple"></i></button>
+                            </div>
+                            <div id="docsList_${student.id}" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                        </div>
+                    </div>
+                </td>
+            `;
+            studentsBodyEl.appendChild(expandTr);
+            
+            tr.addEventListener('click', () => {
+                const isHidden = expandTr.style.display === 'none';
+                document.querySelectorAll('.expanded-row').forEach(r => r.style.display = 'none');
+                if (isHidden) {
+                    expandTr.style.display = 'table-row';
+                    renderMarksDirect(batchForAction, student.id, `marksList_${student.id}`);
+                    renderDocsDirect(batchForAction, student.id, `docsList_${student.id}`);
+                }
+            });
+        }
 
         // Row entrance animation
         requestAnimationFrame(() => {
@@ -812,6 +854,31 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             }, idx * 40);
         });
     });
+
+    // Render Student Dashboard Widgets
+    const dashContainer = document.getElementById('studentDashboardWidgets');
+    if (dashContainer) {
+        if (currentUserRole === 'student' && students.length > 0) {
+            const student = students[0];
+            const batchForAction = student.batchName;
+            dashContainer.style.display = 'flex';
+            dashContainer.innerHTML = `
+                <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 20px; color: var(--text-main); font-size: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-chart-line-up" style="color:var(--primary);margin-right:8px;"></i> My Marks</h3>
+                    <div id="studentMarksList"></div>
+                </div>
+                <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 20px; color: var(--text-main); font-size: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-folder" style="color:var(--primary);margin-right:8px;"></i> My Documents</h3>
+                    <div id="studentDocsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                </div>
+            `;
+            renderMarksDirect(batchForAction, student.id, 'studentMarksList');
+            renderDocsDirect(batchForAction, student.id, 'studentDocsList');
+        } else {
+            dashContainer.style.display = 'none';
+            dashContainer.innerHTML = '';
+        }
+    }
 }
 
 // ─── Event Listeners ───
@@ -825,8 +892,6 @@ function setupEventListeners() {
         modalTitle.textContent = 'New Admission Registration';
         studentForm.reset();
         document.getElementById('studentId').value = '';
-        document.getElementById('modalTabs').style.display = 'none';
-        resetTabs();
         populateBatchDropdown('');
         populateSubjectDropdown('');
         configureModalFields('guest', false);
@@ -872,8 +937,6 @@ function setupEventListeners() {
         modalTitle.textContent = 'Add New Student';
         studentForm.reset();
         document.getElementById('studentId').value = '';
-        document.getElementById('modalTabs').style.display = 'none';
-        resetTabs();
         
         const activeBatch = (currentBatch === 'Home' || currentBatch === '__recycle__') ? '' : currentBatch;
         populateBatchDropdown(activeBatch);
@@ -1268,80 +1331,15 @@ window.editStudent = function(id, batch) {
     }
 
     configureModalFields(currentUserRole || 'student', true);
-    
-    // Show tabs for existing students
-    document.getElementById('modalTabs').style.display = 'flex';
-    resetTabs();
-    
-    // Controls visibility based on role
-    document.getElementById('ownerMarksControls').style.display = currentUserRole === 'owner' ? 'block' : 'none';
-    document.getElementById('ownerDocControls').style.display = currentUserRole === 'owner' ? 'block' : 'none';
-    
-    renderMarks(tb, s.id);
-    renderDocuments(tb, s.id);
-
     openModal();
 };
 
-function resetTabs() {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-        b.style.fontWeight = '500';
-        b.style.color = 'var(--text-muted)';
-        b.style.borderBottom = 'none';
-    });
-    document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.remove('active');
-        c.style.display = 'none';
-    });
-    const firstBtn = document.querySelector('.tab-btn[data-tab="tabBasicInfo"]');
-    if (firstBtn) {
-        firstBtn.classList.add('active');
-        firstBtn.style.fontWeight = '600';
-        firstBtn.style.color = 'var(--primary)';
-        firstBtn.style.borderBottom = '2px solid var(--primary)';
-    }
-    const firstContent = document.getElementById('tabBasicInfo');
-    if (firstContent) {
-        firstContent.classList.add('active');
-        firstContent.style.display = 'block';
-    }
-}
-
-// Attach Tab switching logic
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.tab-btn').forEach(b => {
-            b.classList.remove('active');
-            b.style.fontWeight = '500';
-            b.style.color = 'var(--text-muted)';
-            b.style.borderBottom = 'none';
-        });
-        document.querySelectorAll('.tab-content').forEach(c => {
-            c.classList.remove('active');
-            c.style.display = 'none';
-        });
-        
-        btn.classList.add('active');
-        btn.style.fontWeight = '600';
-        btn.style.color = 'var(--primary)';
-        btn.style.borderBottom = '2px solid var(--primary)';
-        
-        const content = document.getElementById(btn.getAttribute('data-tab'));
-        if (content) {
-            content.classList.add('active');
-            content.style.display = 'block';
-        }
-    });
-});
-
 // MARKS LOGIC
-window.addMark = function(batch, studentId) {
+window.addMarkDirect = function(batch, studentId) {
     if (currentUserRole !== 'owner') return;
-    const exam = document.getElementById('markExamName').value.trim();
-    const subject = document.getElementById('markSubject').value.trim();
-    const score = document.getElementById('markScore').value.trim();
+    const exam = document.getElementById(`markExam_${studentId}`).value.trim();
+    const subject = document.getElementById(`markSubj_${studentId}`).value.trim();
+    const score = document.getElementById(`markScore_${studentId}`).value.trim();
     if (!exam || !subject || !score) { showToast("Please fill all mark fields", "error"); return; }
     
     const student = studentsData[batch]?.find(s => s.id === studentId);
@@ -1350,152 +1348,168 @@ window.addMark = function(batch, studentId) {
     student.marks.push({ id: generateId(), exam, subject, score, date: new Date().toISOString() });
     
     saveToFirebase();
-    document.getElementById('markExamName').value = '';
-    document.getElementById('markSubject').value = '';
-    document.getElementById('markScore').value = '';
-    renderMarks(batch, studentId);
+    document.getElementById(`markExam_${studentId}`).value = '';
+    document.getElementById(`markSubj_${studentId}`).value = '';
+    document.getElementById(`markScore_${studentId}`).value = '';
+    renderMarksDirect(batch, studentId, `marksList_${studentId}`);
     showToast("Mark added", "success");
 };
 
-window.deleteMark = function(batch, studentId, markId) {
+window.deleteMarkDirect = function(batch, studentId, markId, containerId) {
     if (currentUserRole !== 'owner') return;
     const student = studentsData[batch]?.find(s => s.id === studentId);
     if (!student || !student.marks) return;
     student.marks = student.marks.filter(m => m.id !== markId);
     saveToFirebase();
-    renderMarks(batch, studentId);
+    renderMarksDirect(batch, studentId, containerId);
     showToast("Mark deleted", "success");
 };
 
-function renderMarks(batch, studentId) {
-    const tbody = document.getElementById('marksListBody');
-    const emptyState = document.getElementById('emptyMarks');
+window.renderMarksDirect = function(batch, studentId, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
     const student = studentsData[batch]?.find(s => s.id === studentId);
-    tbody.innerHTML = '';
     
     if (!student || !student.marks || student.marks.length === 0) {
-        emptyState.style.display = 'block';
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 20px;">
+                <i class="ph ph-chart-bar" style="font-size: 32px; color: var(--text-muted); margin-bottom: 8px;"></i>
+                <p style="margin: 0; font-size: 14px;">No marks recorded yet.</p>
+            </div>`;
         return;
     }
-    emptyState.style.display = 'none';
+    
+    let html = `
+        <div style="width: 100%; overflow-x: auto;">
+            <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 200px;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">Exam</th>
+                        <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">Subject</th>
+                        <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">Score</th>
+                        <th style="padding: 10px 0; border-bottom: 1px solid var(--border-color); width: 40px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
     
     student.marks.forEach(m => {
-        const tr = document.createElement('tr');
-        const delBtn = currentUserRole === 'owner' ? `<button class="icon-btn delete" onclick="deleteMark('${batch}', '${studentId}', '${m.id}')"><i class="ph ph-trash"></i></button>` : '';
-        tr.innerHTML = `
-            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color);">${m.exam}</td>
-            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color);">${m.subject}</td>
-            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color); font-weight: 600;">${m.score}</td>
-            <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color); text-align: right;">${delBtn}</td>
+        const delBtn = currentUserRole === 'owner' ? `<button class="icon-btn delete" onclick="deleteMarkDirect('${batch}', '${studentId}', '${m.id}', '${containerId}')"><i class="ph ph-trash"></i></button>` : '';
+        html += `
+            <tr>
+                <td style="padding: 10px 8px 10px 0; border-bottom: 1px solid var(--border-color); word-break: break-word;">${m.exam}</td>
+                <td style="padding: 10px 8px 10px 0; border-bottom: 1px solid var(--border-color); word-break: break-word;">${m.subject}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color); font-weight: 600;">${m.score}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid var(--border-color); text-align: right;">${delBtn}</td>
+            </tr>
         `;
-        tbody.appendChild(tr);
     });
-}
-
-document.getElementById('addMarkBtn')?.addEventListener('click', () => {
-    const batch = document.getElementById('studentBatchName').value;
-    const id = document.getElementById('studentId').value;
-    if (id && batch) addMark(batch, id);
-});
+    
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+};
 
 // DOCUMENTS LOGIC
-window.uploadDoc = async function(batch, studentId) {
+
+window.uploadDocDirect = async function(batch, studentId) {
     if (currentUserRole !== 'owner') return;
-    const title = document.getElementById('docName').value.trim();
-    const fileInput = document.getElementById('docFile');
+    const title = document.getElementById(`docName_${studentId}`).value.trim();
+    const fileInput = document.getElementById(`docFile_${studentId}`);
     if (!title || fileInput.files.length === 0) { showToast("Provide a title and select a file", "error"); return; }
     
     const file = fileInput.files[0];
-    const btn = document.getElementById('uploadDocBtn');
+    if (file.size > 2 * 1024 * 1024) { showToast("File is too large. Max 2MB allowed.", "error"); return; }
+    
+    const btn = document.getElementById(`btnDoc_${studentId}`);
     btn.disabled = true;
     btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i>';
     
     try {
-        const ext = file.name.split('.').pop();
-        const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const path = `students/${studentId}/${safeTitle}_${Date.now()}.${ext}`;
-        const sRef = storageRef(storage, path);
-        
-        await uploadBytes(sRef, file);
-        const url = await getDownloadURL(sRef);
-        
-        const student = studentsData[batch]?.find(s => s.id === studentId);
-        if (student) {
-            if (!student.documents) student.documents = [];
-            student.documents.push({ id: generateId(), title, url, path, uploadedAt: new Date().toISOString() });
-            saveToFirebase();
-            renderDocuments(batch, studentId);
-            showToast("Document uploaded", "success");
-        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result;
+            const student = studentsData[batch]?.find(s => s.id === studentId);
+            if (student) {
+                if (!student.documents) student.documents = [];
+                // Store base64 data URL directly
+                student.documents.push({ id: generateId(), title, url: base64Data, uploadedAt: new Date().toISOString() });
+                saveToFirebase();
+                renderDocsDirect(batch, studentId, `docsList_${studentId}`);
+                showToast("Document uploaded", "success");
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-upload-simple"></i>';
+            document.getElementById(`docName_${studentId}`).value = '';
+            fileInput.value = '';
+        };
+        reader.onerror = function() {
+            showToast("Failed to read file", "error");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-upload-simple"></i>';
+        };
+        reader.readAsDataURL(file);
     } catch (e) {
         console.error(e);
         showToast("Upload failed", "error");
-    } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="ph ph-upload-simple"></i>';
-        document.getElementById('docName').value = '';
-        fileInput.value = '';
     }
 };
 
-window.deleteDoc = async function(batch, studentId, docId, docPath) {
+window.deleteDocDirect = async function(batch, studentId, docId, docPath, containerId) {
     if (currentUserRole !== 'owner') return;
-    if (!confirm("Delete this document?")) return;
+    if (!await showConfirm({ title: 'Delete Document', message: 'Are you sure you want to delete this document?', danger: true, confirmText: 'Delete' })) return;
     
     try {
-        const sRef = storageRef(storage, docPath);
-        await deleteObject(sRef);
-        
         const student = studentsData[batch]?.find(s => s.id === studentId);
         if (student && student.documents) {
             student.documents = student.documents.filter(d => d.id !== docId);
             saveToFirebase();
-            renderDocuments(batch, studentId);
+            renderDocsDirect(batch, studentId, containerId);
             showToast("Document deleted", "success");
         }
-    } catch(e) {
+    } catch (e) {
         console.error(e);
-        showToast("Failed to delete", "error");
+        showToast("Failed to delete document", "error");
     }
 };
 
-function renderDocuments(batch, studentId) {
-    const list = document.getElementById('documentsList');
-    const emptyState = document.getElementById('emptyDocs');
+window.renderDocsDirect = function(batch, studentId, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
     const student = studentsData[batch]?.find(s => s.id === studentId);
-    list.innerHTML = '';
     
     if (!student || !student.documents || student.documents.length === 0) {
-        emptyState.style.display = 'block';
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 20px;">
+                <i class="ph ph-file-pdf" style="font-size: 32px; color: var(--text-muted); margin-bottom: 8px;"></i>
+                <p style="margin: 0; font-size: 14px;">No documents uploaded yet.</p>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Please upload files under 2MB.</p>
+            </div>`;
         return;
     }
-    emptyState.style.display = 'none';
     
+    let html = '';
     student.documents.forEach(d => {
-        const item = document.createElement('div');
-        item.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card);";
-        
-        const delBtn = currentUserRole === 'owner' ? `<button class="icon-btn delete" onclick="deleteDoc('${batch}', '${studentId}', '${d.id}', '${d.path}')" style="margin-left:8px;"><i class="ph ph-trash"></i></button>` : '';
-        
-        item.innerHTML = `
-            <div style="display:flex; align-items:center; gap: 12px;">
-                <i class="ph ph-file-text" style="font-size:24px; color:var(--primary);"></i>
-                <span style="font-weight: 500; color: var(--text-main);">${d.title}</span>
-            </div>
-            <div style="display:flex; align-items:center;">
-                <a href="${d.url}" target="_blank" class="icon-btn" style="color:var(--primary);" title="Download"><i class="ph ph-download-simple"></i></a>
-                ${delBtn}
+        const delBtn = currentUserRole === 'owner' ? `<button class="icon-btn delete" onclick="deleteDocDirect('${batch}', '${studentId}', '${d.id}', '${d.path}', '${containerId}')" title="Delete"><i class="ph ph-trash"></i></button>` : '';
+        const dateStr = new Date(d.uploadedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        html += `
+            <div style="display: flex; align-items: center; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-body);">
+                <i class="ph ph-file-text" style="font-size: 24px; color: var(--primary); margin-right: 12px;"></i>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${d.title}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">${dateStr}</div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-left: 12px;">
+                    <a href="${d.url}" download="${d.title}" class="icon-btn" style="color: var(--primary);" title="Download"><i class="ph ph-download-simple"></i></a>
+                    ${delBtn}
+                </div>
             </div>
         `;
-        list.appendChild(item);
     });
-}
-
-document.getElementById('uploadDocBtn')?.addEventListener('click', () => {
-    const batch = document.getElementById('studentBatchName').value;
-    const id = document.getElementById('studentId').value;
-    if (id && batch) uploadDoc(batch, id);
-});
+    
+    container.innerHTML = html;
+};
 
 window.deleteStudent = function(id, batch) {
     if (currentUserRole !== 'owner') return;
