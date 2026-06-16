@@ -704,6 +704,10 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     const subCol     = `<th class="sortable col-subjects" data-col="subjects">Subjects ${sortIndicator('subjects')}</th>`;
     const subCntCol  = `<th class="sortable col-subcount" data-col="subCount">Total Subj. ${sortIndicator('subCount')}</th>`;
 
+    let colCount = 7; // no, name, school, subjects, subCount, fees, actions
+    if (isAll || currentBatch === '__recycle__') colCount++;
+    if (currentUserRole === 'owner') colCount++;
+
     tableHeaders.innerHTML = classCol + noCol + nameCol + schoolCol + subCol + subCntCol + feesCol + waCol + actionsCol;
 
     // Attach sort click handlers
@@ -808,7 +812,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             expandTr.className = 'expanded-row';
             expandTr.style.display = 'none';
             expandTr.innerHTML = `
-                <td colspan="10" style="padding: 0; background: var(--bg-body); border-bottom: 2px solid var(--border-color);">
+                <td colspan="${colCount}" style="padding: 0; background: var(--bg-body); border-bottom: 2px solid var(--border-color);">
                     <div class="expanded-content" id="expanded_${student.id}" style="padding: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
                         <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
                             <h4 style="margin-bottom: 16px; color: var(--text-main); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-chart-line-up" style="color:var(--primary);margin-right:8px;"></i>Marks</h4>
