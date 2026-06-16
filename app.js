@@ -282,11 +282,20 @@ const DEFAULT_SUBJECTS = [
 ];
 let allSubjectsList = [...DEFAULT_SUBJECTS];
 
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        console.log("User is logged in:", user.email);
+    } else {
+        console.log("No user is logged in.");
+    }
+});
+// Configure modals on load
+configureModalFields(currentUserRole, true);
+
 // ─── Splash ───
-document.addEventListener('DOMContentLoaded', () => {
-    const splash = document.getElementById('splashScreen');
-    const title  = document.getElementById('splashTitle');
-    if (!title || !splash) return;
+const splash = document.getElementById('splashScreen');
+const title  = document.getElementById('splashTitle');
+if (title && splash) {
     const text = title.textContent.trim();
     title.innerHTML = '';
     let delay = 0.3;
@@ -312,12 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
         splash.classList.add('fade-out');
         setTimeout(() => splash.style.display = 'none', 800);
     }, 2500);
-});
+}
 
 // ─── Theme Toggle ───
-document.addEventListener('DOMContentLoaded', () => {
-    const btn  = document.getElementById('themeToggle');
-    if (!btn) return;
+const btn  = document.getElementById('themeToggle');
+if (btn) {
     const icon = btn.querySelector('i');
     if (localStorage.getItem('theme') === 'dark') {
         document.body.classList.add('dark-mode');
@@ -328,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', dark ? 'dark' : 'light');
         icon.classList.replace(dark ? 'ph-moon' : 'ph-sun', dark ? 'ph-sun' : 'ph-moon');
     });
-});
+}
 
 // ─── DOM refs ───
 const batchListEl        = document.getElementById('batchList');
@@ -886,6 +894,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
 }
 
 // ─── Event Listeners ───
+setupEventListeners();
 function setupEventListeners() {
     // Role cards
     roleStudentBtn?.addEventListener('click', () => openLoginModal('student', 'Student Login'));
@@ -1209,10 +1218,8 @@ function setFeesToggle(value) {
     paidDetails.style.display = value === 'Paid' ? 'block' : 'none';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('feesPendingBtn')?.addEventListener('click', () => setFeesToggle('Pending'));
-    document.getElementById('feesPaidBtn')?.addEventListener('click',    () => setFeesToggle('Paid'));
-});
+document.getElementById('feesPendingBtn')?.addEventListener('click', () => setFeesToggle('Pending'));
+document.getElementById('feesPaidBtn')?.addEventListener('click',    () => setFeesToggle('Paid'));
 
 function saveStudent() {
     const id       = document.getElementById('studentId').value || generateId();

@@ -271,6 +271,11 @@
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module" src="app.js?v=13"></script>
+<script>
+  const script = document.createElement('script');
+  script.type = 'module';
+  script.src = 'app.js?v=' + new Date().getTime();
+  document.body.appendChild(script);
+</script>
 </body>
 </html>
