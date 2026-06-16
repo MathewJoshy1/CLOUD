@@ -282,13 +282,7 @@ const DEFAULT_SUBJECTS = [
 ];
 let allSubjectsList = [...DEFAULT_SUBJECTS];
 
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        console.log("User is logged in:", user.email);
-    } else {
-        console.log("No user is logged in.");
-    }
-});
+
 // Configure modals on load
 configureModalFields(currentUserRole, true);
 
