@@ -1273,7 +1273,11 @@ document.getElementById('feesPaidBtn')?.addEventListener('click',    () => setFe
 function saveStudent() {
     const id       = document.getElementById('studentId').value || generateId();
     const newBatch = document.getElementById('studentBatchName').value;
-    if (!newBatch) { showToast("Please select a Class.", "error"); return; }
+    if (attemptingRole === 'guest' && !newBatch) { showToast("Please select a Class.", "error"); return; }
+    if (!newBatch && attemptingRole !== 'guest') { 
+        // If owner leaves it blank, we can either block or let it be empty. The user requested "nothing mandatory"
+        // so it will be saved under an empty batch name if they leave it blank.
+    }
 
     const name       = document.getElementById('studentName').value.trim();
     const schoolName = document.getElementById('schoolName').value.trim();
@@ -1281,12 +1285,10 @@ function saveStudent() {
 
     if (attemptingRole === 'guest') {
         if (!name || !schoolName || !contact) { showToast("Please fill in Student Name, School Name, and Whatsapp Contact.", "error"); return; }
-    } else {
-        if (!name || !schoolName || !contact) { showToast("Student Name, School Name, and Contact are mandatory.", "error"); return; }
     }
 
     const subjects = document.getElementById('studentSubjects').value;
-    if (!subjects) { showToast("Please select at least one subject.", "error"); return; }
+    if (attemptingRole === 'guest' && !subjects) { showToast("Please select at least one subject.", "error"); return; }
     
     const manualSubCount = parseInt(document.getElementById('liveSubjectCount')?.value, 10) || 0;
     const fees     = document.getElementById('studentFees')?.value || 'Pending';
