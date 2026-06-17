@@ -1025,9 +1025,11 @@ function renderFeesTable() {
         }
     });
 
-    // Hide standard stats container
+    // Hide standard stats container and chart
     const statsContainer = document.getElementById('statsContainer');
     if (statsContainer) statsContainer.style.display = 'none';
+    const chartContainer = document.getElementById('analyticsChartContainer');
+    if (chartContainer) chartContainer.style.display = 'none';
 
     // Update fees stats container
     const feesStatsContainer = document.getElementById('feesStatsContainer');
