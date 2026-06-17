@@ -1123,15 +1123,18 @@ function populateSubjectDropdown(subjectString) {
     }
 
     function addSubjectRow(subject, preChecked) {
-        const d  = document.createElement('div');
-        d.className = 'multi-select-item';
+        const lbl = document.createElement('label');
+        lbl.className = 'multi-select-item';
+        lbl.style.display = 'flex';
+        lbl.style.cursor = 'pointer';
+        
         const sp = document.createElement('span');
         sp.textContent = subject;
+        
         const cb = document.createElement('input');
         cb.type = 'checkbox'; cb.value = subject;
         if (preChecked) cb.checked = true;
 
-        d.addEventListener('click', e => { if (e.target !== cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); } });
         cb.addEventListener('change', e => {
             if (subject === 'All Subjects' && e.target.checked) {
                 ssi.querySelectorAll('input[type="checkbox"]').forEach(c => { if (c.value !== 'All Subjects') c.checked = false; });
@@ -1141,8 +1144,10 @@ function populateSubjectDropdown(subjectString) {
             }
             update();
         });
-        d.appendChild(sp); d.appendChild(cb);
-        ssi.appendChild(d);
+        
+        lbl.appendChild(sp); 
+        lbl.appendChild(cb);
+        ssi.appendChild(lbl);
     }
 
     // Render all current subjects
