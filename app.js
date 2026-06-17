@@ -739,6 +739,9 @@ function renderTable(searchTerm = "", inClassSearch = "") {
 
     // Stats
     const statsContainer = document.getElementById('statsContainer');
+    const feesStatsContainer = document.getElementById('feesStatsContainer');
+    if (feesStatsContainer) feesStatsContainer.style.display = 'none';
+
     if (currentUserRole !== 'owner' || !isAll) {
         if (statsContainer) statsContainer.style.display = 'none';
     } else {
@@ -1022,22 +1025,18 @@ function renderFeesTable() {
         }
     });
 
-    // Update stats container directly
+    // Hide standard stats container
     const statsContainer = document.getElementById('statsContainer');
-    if (statsContainer) {
-        statsContainer.style.display = 'flex';
-        statsContainer.innerHTML = `
-            <div style="display: flex; gap: 16px; width: 100%;">
-                <div class="stat-box" style="flex: 1; border-left: 4px solid #10b981;">
-                    <span class="stat-label">FEES RECEIVED:</span>
-                    <span class="stat-value text-success">₹${totalCollected.toLocaleString('en-IN')}</span>
-                </div>
-                <div class="stat-box" style="flex: 1; border-left: 4px solid #ef4444;">
-                    <span class="stat-label">FEES PENDING:</span>
-                    <span class="stat-value text-danger">₹${totalPending.toLocaleString('en-IN')}</span>
-                </div>
-            </div>
-        `;
+    if (statsContainer) statsContainer.style.display = 'none';
+
+    // Update fees stats container
+    const feesStatsContainer = document.getElementById('feesStatsContainer');
+    if (feesStatsContainer) {
+        feesStatsContainer.style.display = 'flex';
+        const recv = document.getElementById('feesTotalReceived');
+        const pend = document.getElementById('feesTotalPending');
+        if (recv) recv.textContent = `₹${totalCollected.toLocaleString('en-IN')}`;
+        if (pend) pend.textContent = `₹${totalPending.toLocaleString('en-IN')}`;
     }
 
     studentsTableEl.style.display = 'table';
