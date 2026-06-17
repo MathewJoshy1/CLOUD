@@ -415,6 +415,15 @@ function renderBatches(filter = "") {
     homeDiv.addEventListener('click', () => selectBatch('Home'));
     if (!filter || 'home'.includes(filter.toLowerCase())) batchListEl.appendChild(homeDiv);
 
+    // FEES
+    if (currentUserRole === 'owner') {
+        const feesDiv = document.createElement('div');
+        feesDiv.className = `batch-item ${currentBatch === '__fees__' ? 'active' : ''}`;
+        feesDiv.innerHTML = `<i class="ph ph-currency-inr" style="color:var(--primary);"></i> FEES`;
+        feesDiv.addEventListener('click', () => selectBatch('__fees__'));
+        if (!filter || 'fees'.includes(filter.toLowerCase())) batchListEl.appendChild(feesDiv);
+    }
+
     batchGroups.forEach(group => {
         const filtered = group.batches.filter(b => b.toLowerCase().includes(filter.toLowerCase()));
         if (!filtered.length) return;
@@ -514,7 +523,34 @@ function logout() {
 function selectBatch(batch) {
     currentBatch = batch;
     sortCol = null; sortAsc = true;
-    currentBatchTitleEl.textContent = batch;
+    
+    // UI Controls
+    const addBtn = document.getElementById('addStudentBtn');
+    const printBtn = document.getElementById('printBtn');
+    const exportBtn = document.getElementById('exportCsvBtn');
+
+    if (batch === '__fees__') {
+        currentBatchTitleEl.textContent = "Fees Collection";
+        if (addBtn) addBtn.style.display = 'none';
+        if (printBtn) printBtn.style.display = 'none';
+        if (exportBtn) exportBtn.style.display = 'none';
+    } else if (batch === '__recycle__') {
+        currentBatchTitleEl.textContent = "Recycle Bin";
+        if (addBtn) addBtn.style.display = 'none';
+        if (printBtn) printBtn.style.display = 'none';
+        if (exportBtn) exportBtn.style.display = 'none';
+    } else if (batch === '__pending__') {
+        currentBatchTitleEl.textContent = "Pending Admissions";
+        if (addBtn) addBtn.style.display = 'none';
+        if (printBtn) printBtn.style.display = 'none';
+        if (exportBtn) exportBtn.style.display = 'none';
+    } else {
+        currentBatchTitleEl.textContent = batch === 'Home' ? 'All Classes' : batch;
+        if (addBtn && currentUserRole !== 'student') addBtn.style.display = 'inline-flex';
+        if (printBtn && currentUserRole === 'owner') printBtn.style.display = 'inline-flex';
+        if (exportBtn && currentUserRole === 'owner') exportBtn.style.display = 'inline-flex';
+    }
+
     if (sidebarEl) sidebarEl.classList.remove('mobile-open');
     if (sidebarOverlay) sidebarOverlay.classList.remove('active');
     document.querySelectorAll('.batch-item').forEach(el => {
@@ -522,6 +558,7 @@ function selectBatch(batch) {
         const itemName = textSpan ? textSpan.textContent.trim() : el.textContent.replace(/[0-9]+$/, '').trim();
         if (batch === 'Home') el.classList.toggle('active', itemName === 'Home');
         else if (batch === '__recycle__') el.classList.toggle('active', itemName === 'Recycle Bin');
+        else if (batch === '__fees__') el.classList.toggle('active', itemName === 'FEES');
         else el.classList.toggle('active', itemName === batch);
     });
 
@@ -529,12 +566,16 @@ function selectBatch(batch) {
     const tableSearchBar = document.getElementById('tableSearchBar');
     const tableSearch    = document.getElementById('tableSearch');
     if (tableSearchBar) {
-        const show = batch !== 'Home';
+        const show = batch !== 'Home' && batch !== '__fees__';
         tableSearchBar.style.display = show ? 'flex' : 'none';
         if (tableSearch) tableSearch.value = '';
     }
 
-    renderTable();
+    if (batch === '__fees__') {
+        renderFeesTable();
+    } else {
+        renderTable();
+    }
 }
 
 // ─── Subject count util ───
@@ -734,9 +775,8 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         return sortAsc ? '<i class="ph ph-arrow-up sort-icon active"></i>' : '<i class="ph ph-arrow-down sort-icon active"></i>';
     };
 
-    // Fees column visible to all; WhatsApp only to owner
+    // WhatsApp only to owner
     const checkCol   = currentUserRole === 'owner' ? `<th class="col-check" style="width:40px;"><input type="checkbox" id="selectAllStudents"></th>` : '';
-    const feesCol    = `<th class="sortable col-fees" data-col="fees">Fees ${sortIndicator('fees')}</th>`;
     const waCol      = currentUserRole === 'owner' ? `<th class="col-wa"></th>` : '';
     const actionsCol = `<th class="col-actions" style="text-align:right;">Actions</th>`;
     const classCol   = (isAll || currentBatch === '__recycle__') ? `<th class="sortable col-class" data-col="batchName">Class ${sortIndicator('batchName')}</th>` : '';
@@ -746,11 +786,11 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     const subCol     = `<th class="sortable col-subjects" data-col="subjects">Subjects ${sortIndicator('subjects')}</th>`;
     const subCntCol  = `<th class="sortable col-subcount" data-col="subCount">Total Subj. ${sortIndicator('subCount')}</th>`;
 
-    let colCount = 7; // no, name, school, subjects, subCount, fees, actions
+    let colCount = 6; // no, name, school, subjects, subCount, actions
     if (isAll || currentBatch === '__recycle__') colCount++;
     if (currentUserRole === 'owner') colCount += 2; // WA + Checkbox
 
-    tableHeaders.innerHTML = checkCol + classCol + noCol + nameCol + schoolCol + subCol + subCntCol + feesCol + waCol + actionsCol;
+    tableHeaders.innerHTML = checkCol + classCol + noCol + nameCol + schoolCol + subCol + subCntCol + waCol + actionsCol;
 
     // Attach sort click handlers
     tableHeaders.querySelectorAll('.sortable').forEach(th => {
@@ -832,7 +872,6 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             : '';
 
         const checkCell = currentUserRole === 'owner' ? `<td class="col-check" onclick="event.stopPropagation()"><input type="checkbox" class="student-select" data-id="${student.id}" data-batch="${batchForAction}"></td>` : '';
-        const feesCell = `<td class="col-fees">${feesBadge(student)}</td>`;
         const waCell   = currentUserRole === 'owner' ? `<td class="col-wa">${waBtn}</td>` : '';
 
         const tr = document.createElement('tr');
@@ -848,7 +887,6 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             <td class="col-school">${student.schoolName || '-'}</td>
             <td class="col-subjects">${subBadge}</td>
             <td class="col-subcount" style="font-weight:600;text-align:center;">${subCount}</td>
-            ${feesCell}
             ${waCell}
             <td class="col-actions" style="text-align: right;" onclick="event.stopPropagation()">
                 <div class="action-btns" style="justify-content: flex-end;">
@@ -948,22 +986,109 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             const batchForAction = student.batchName;
             dashContainer.style.display = 'flex';
             dashContainer.innerHTML = `
-                <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
-                    <h3 style="margin-bottom: 20px; color: var(--text-main); font-size: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-chart-line-up" style="color:var(--primary);margin-right:8px;"></i> My Marks</h3>
-                    <div id="studentMarksList"></div>
+                <div class="dash-card">
+                    <div class="dash-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);"><i class="ph ph-books"></i></div>
+                    <div class="dash-info"><h3>Subjects Enrolled</h3><p>${student.subjectCount !== undefined ? student.subjectCount : calcSubjectCount(student.subjects)}</p></div>
                 </div>
-                <div class="expanded-card" style="flex: 1; min-width: 260px; background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
-                    <h3 style="margin-bottom: 20px; color: var(--text-main); font-size: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><i class="ph ph-folder" style="color:var(--primary);margin-right:8px;"></i> My Documents</h3>
-                    <div id="studentDocsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                <div class="dash-card">
+                    <div class="dash-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);"><i class="ph ph-currency-inr"></i></div>
+                    <div class="dash-info"><h3>Pending Fees</h3><p>${student.fees === 'Paid' && student.feesRemaining ? '₹' + parseInt(student.feesRemaining).toLocaleString('en-IN') : (student.fees === 'Paid' ? '₹0' : 'Pending')}</p></div>
                 </div>
             `;
-            renderMarksDirect(batchForAction, student.id, 'studentMarksList');
-            renderDocsDirect(batchForAction, student.id, 'studentDocsList');
         } else {
             dashContainer.style.display = 'none';
-            dashContainer.innerHTML = '';
         }
     }
+}
+
+// ─── Render Fees Table ───
+function renderFeesTable() {
+    selectedStudents = [];
+    updateBulkActionBar();
+    let students = [];
+
+    // Collect all active students
+    Object.keys(studentsData).forEach(bn => {
+        studentsData[bn].forEach(s => students.push({...s, batchName: bn}));
+    });
+
+    // Calculate Dashboard Totals
+    let totalCollected = 0;
+    let totalPending = 0;
+    students.forEach(s => {
+        if (s.fees === 'Paid') {
+            totalCollected += parseInt(s.feesAmountPaid) || 0;
+            totalPending += parseInt(s.feesRemaining) || 0;
+        }
+    });
+
+    // Update stats container directly
+    const statsContainer = document.getElementById('statsContainer');
+    if (statsContainer) {
+        statsContainer.style.display = 'flex';
+        statsContainer.innerHTML = `
+            <div style="display: flex; gap: 16px; width: 100%;">
+                <div class="stat-box" style="flex: 1; border-left: 4px solid #10b981;">
+                    <span class="stat-label">FEES RECEIVED:</span>
+                    <span class="stat-value text-success">₹${totalCollected.toLocaleString('en-IN')}</span>
+                </div>
+                <div class="stat-box" style="flex: 1; border-left: 4px solid #ef4444;">
+                    <span class="stat-label">FEES PENDING:</span>
+                    <span class="stat-value text-danger">₹${totalPending.toLocaleString('en-IN')}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    studentsTableEl.style.display = 'table';
+    emptyStateEl.style.display = 'none';
+    studentsBodyEl.innerHTML = "";
+
+    // Table Headers for Fees View
+    tableHeaders.innerHTML = `
+        <th class="col-class" style="width:120px;">Class</th>
+        <th class="col-name">Student Name</th>
+        <th class="col-fees-paid" style="width:150px;">Paid</th>
+        <th class="col-fees-pending" style="width:150px;">Pending</th>
+        <th class="col-actions" style="text-align:right; width:80px;">Actions</th>
+    `;
+
+    // Sort by name by default
+    students.sort((a,b) => a.name.localeCompare(b.name));
+
+    students.forEach((student, idx) => {
+        const tr = document.createElement('tr');
+        tr.style.opacity = '0';
+        tr.style.transform = 'translateY(10px)';
+        tr.className = 'main-student-row';
+
+        let paidText = '';
+        let pendingText = '';
+        if (student.fees === 'Paid') {
+            if (student.feesAmountPaid) paidText = `₹${parseInt(student.feesAmountPaid).toLocaleString('en-IN')}`;
+            if (student.feesRemaining && parseInt(student.feesRemaining) > 0) pendingText = `₹${parseInt(student.feesRemaining).toLocaleString('en-IN')}`;
+        }
+
+        tr.innerHTML = `
+            <td class="col-class"><span class="class-badge">${student.batchName}</span></td>
+            <td class="col-name" style="font-weight: 600; color: var(--text-main);">${student.name}</td>
+            <td class="col-fees-paid text-success">${paidText}</td>
+            <td class="col-fees-pending text-danger">${pendingText}</td>
+            <td class="col-actions" style="text-align: right;" onclick="event.stopPropagation()">
+                <button class="icon-btn edit" onclick="editFees('${student.id}','${student.batchName}')" title="Edit Fees"><i class="ph ph-pencil-simple"></i></button>
+            </td>
+        `;
+        studentsBodyEl.appendChild(tr);
+
+        // Row entrance animation
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                tr.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                tr.style.opacity = '1';
+                tr.style.transform = 'translateY(0)';
+            }, idx * 40);
+        });
+    });
 }
 
 // ─── Event Listeners ───
@@ -1366,7 +1491,6 @@ function configureModalFields(role, isEdit) {
         }
     }
 }
-
 window.editStudent = function(id, batch) {
     const tb = batch || currentBatch;
     const s  = studentsData[tb]?.find(s => s.id === id);
@@ -1379,6 +1503,7 @@ window.editStudent = function(id, batch) {
     document.getElementById('schoolName').value     = s.schoolName || '';
     populateSubjectDropdown(s.subjects);
     document.getElementById('studentContact').value = s.contact || '';
+    
     // Load fees
     setFeesToggle(s.fees || 'Pending');
     const fa = document.getElementById('feesAmountPaid');
@@ -1397,6 +1522,72 @@ window.editStudent = function(id, batch) {
     configureModalFields(currentUserRole || 'student', true);
     openModal();
 };
+
+// ─── Edit Fees Logic ───
+const editFeesModal = document.getElementById('editFeesModal');
+
+window.editFees = function(id, batch) {
+    const student = studentsData[batch]?.find(s => s.id === id);
+    if (!student) return;
+
+    document.getElementById('feesEditStudentId').value = student.id;
+    document.getElementById('feesEditStudentBatch').value = batch;
+    document.getElementById('editFeesStudentName').textContent = student.name + " (" + batch + ")";
+    
+    // Attempt to reverse-calculate the total if available, otherwise just leave blank
+    const paid = parseInt(student.feesAmountPaid) || 0;
+    const remaining = parseInt(student.feesRemaining) || 0;
+    const total = paid + remaining;
+    
+    document.getElementById('feesEditTotalAmount').value = total > 0 ? total : '';
+    document.getElementById('feesEditAmountPaid').value = student.feesAmountPaid || '';
+    document.getElementById('feesEditRemaining').value = student.feesRemaining || '';
+
+    editFeesModal.classList.add('active');
+};
+
+function calculatePendingFees() {
+    const total = parseInt(document.getElementById('feesEditTotalAmount').value) || 0;
+    const paid = parseInt(document.getElementById('feesEditAmountPaid').value) || 0;
+    const remaining = total - paid;
+    document.getElementById('feesEditRemaining').value = remaining >= 0 ? remaining : 0;
+}
+
+document.getElementById('feesEditTotalAmount')?.addEventListener('input', calculatePendingFees);
+document.getElementById('feesEditAmountPaid')?.addEventListener('input', calculatePendingFees);
+
+document.getElementById('closeFeesModalBtn')?.addEventListener('click', () => {
+    editFeesModal.classList.remove('active');
+});
+
+document.getElementById('saveFeesBtn')?.addEventListener('click', () => {
+    const id = document.getElementById('feesEditStudentId').value;
+    const batch = document.getElementById('feesEditStudentBatch').value;
+    const student = studentsData[batch]?.find(s => s.id === id);
+    if (!student) return;
+
+    const paid = document.getElementById('feesEditAmountPaid').value;
+    const remaining = document.getElementById('feesEditRemaining').value;
+
+    if (paid !== '' || remaining !== '') {
+        student.fees = 'Paid';
+        student.feesAmountPaid = paid;
+        student.feesRemaining = remaining;
+        // Keep existing date or set to today if blank
+        student.feesDatePaid = student.feesDatePaid || new Date().toISOString().split('T')[0];
+    } else {
+        student.fees = 'Pending';
+        student.feesAmountPaid = '';
+        student.feesRemaining = '';
+        student.feesDatePaid = '';
+    }
+
+    saveToFirebase();
+    editFeesModal.classList.remove('active');
+    showToast("Fees updated successfully!", "success");
+    if (currentBatch === '__fees__') renderFeesTable();
+    else renderTable();
+});
 
 // MARKS LOGIC
 window.addMarkDirect = function(batch, studentId) {

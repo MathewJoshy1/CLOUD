@@ -188,6 +188,38 @@
     </main>
 </div>
 
+<!-- Edit Fees Modal -->
+<div class="modal-overlay" id="editFeesModal">
+    <div class="modal" style="max-width: 400px;">
+        <button class="close-modal-btn" id="closeFeesModalBtn"><i class="ph ph-x"></i></button>
+        <div class="modal-header">
+            <h2 style="font-size: 20px;"><i class="ph ph-currency-inr" style="color:var(--primary); margin-right:8px;"></i> Edit Fees</h2>
+            <p id="editFeesStudentName" style="color:var(--text-muted); margin-top:4px; font-size: 14px;"></p>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="feesEditStudentId">
+            <input type="hidden" id="feesEditStudentBatch">
+            
+            <div class="form-group">
+                <label for="feesEditTotalAmount">Total Course Fee (₹)</label>
+                <input type="number" id="feesEditTotalAmount" placeholder="e.g. 50000" min="0">
+            </div>
+            <div class="form-group">
+                <label for="feesEditAmountPaid">Amount Paid (₹)</label>
+                <input type="number" id="feesEditAmountPaid" placeholder="e.g. 10000" min="0">
+            </div>
+            <div class="form-group">
+                <label for="feesEditRemaining">Pending Amount (₹)</label>
+                <input type="number" id="feesEditRemaining" readonly style="background-color: var(--bg-body); cursor: not-allowed; font-weight: bold; color: var(--danger);">
+                <small style="color:var(--text-muted); margin-top:4px; display:block;">Automatically calculated</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-primary" id="saveFeesBtn" style="width: 100%;">Save Fees</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add/Edit Student Modal -->
 <div class="modal-overlay" id="studentModal">
     <div class="modal">
