@@ -778,7 +778,9 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         }
 
         // WhatsApp button — owner only
-        const cleanContact = student.contact ? student.contact.replace(/\D/g, '') : '';
+        let cleanContact = student.contact ? student.contact.replace(/\D/g, '') : '';
+        if (cleanContact.length === 10) cleanContact = '91' + cleanContact;
+        
         const waBtn = currentUserRole === 'owner' && cleanContact
             ? `<a href="https://wa.me/${cleanContact}" target="_blank" class="icon-btn whatsapp" title="WhatsApp ${student.name}"><i class="ph ph-whatsapp-logo"></i></a>`
             : (currentUserRole === 'owner' ? `<span style="color:var(--text-muted);font-size:12px;">—</span>` : '');
