@@ -1128,11 +1128,15 @@ function populateSubjectDropdown(subjectString) {
         lbl.style.display = 'flex';
         lbl.style.cursor = 'pointer';
         
+        const uid = 'subj_' + subject.replace(/\s+/g, '') + '_' + Math.random().toString(36).substr(2, 5);
+        lbl.htmlFor = uid;
+        
         const sp = document.createElement('span');
         sp.textContent = subject;
         
         const cb = document.createElement('input');
         cb.type = 'checkbox'; cb.value = subject;
+        cb.id = uid;
         if (preChecked) cb.checked = true;
 
         cb.addEventListener('change', e => {
