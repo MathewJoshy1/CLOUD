@@ -970,29 +970,15 @@ function setupEventListeners() {
     // Custom selects toggle
     const ss  = document.getElementById('selectSelected');
     const si  = document.getElementById('selectItems');
-    const sss = document.getElementById('subjectSelectSelected');
-    const ssi = document.getElementById('subjectSelectItems');
 
     ss?.addEventListener('click', e => {
         e.stopPropagation();
         if (document.getElementById('customBatchSelect')?.classList.contains('disabled')) return;
-        sss?.classList.remove('select-arrow-active');
-        if (ssi) ssi.style.display = 'none';
         ss.classList.toggle('select-arrow-active');
         si.style.display = si.style.display === 'block' ? 'none' : 'block';
         if (si.style.display === 'none') ss.classList.remove('select-arrow-active');
     });
 
-    sss?.addEventListener('click', e => {
-        e.stopPropagation();
-        ss?.classList.remove('select-arrow-active');
-        if (si) si.style.display = 'none';
-        sss.classList.toggle('select-arrow-active');
-        ssi.style.display = ssi.style.display === 'block' ? 'none' : 'block';
-        if (ssi.style.display === 'none') sss.classList.remove('select-arrow-active');
-    });
-
-    ssi?.addEventListener('click', e => e.stopPropagation());
     document.addEventListener('click', () => window.closeCustomSelect?.());
 }
 
@@ -1053,8 +1039,8 @@ function enterApp(role, userId) {
 }
 
 window.closeCustomSelect = function() {
-    ['selectSelected','subjectSelectSelected'].forEach(id => document.getElementById(id)?.classList.remove('select-arrow-active'));
-    ['selectItems','subjectSelectItems'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    ['selectSelected'].forEach(id => document.getElementById(id)?.classList.remove('select-arrow-active'));
+    ['selectItems'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 };
 
 function defaultSubjectsFor(batch) {
@@ -1096,7 +1082,6 @@ function saveCustomSubject(subject) {
 
 function populateSubjectDropdown(subjectString) {
     const ssi = document.getElementById('subjectSelectItems');
-    const sss = document.getElementById('subjectSelectSelected');
     const hsi = document.getElementById('studentSubjects');
     ssi.innerHTML = '';
 
@@ -1115,9 +1100,9 @@ function populateSubjectDropdown(subjectString) {
         const cbs = ssi.querySelectorAll('input[type="checkbox"]');
         let allSel = false, sel = [];
         cbs.forEach(cb => { if (cb.value === 'All Subjects' && cb.checked) allSel = true; else if (cb.checked) sel.push(cb.value); });
-        if (allSel)          { hsi.value = 'All Subjects'; sss.textContent = 'All Subjects'; }
-        else if (sel.length) { hsi.value = sel.join(', ');  sss.textContent = sel.join(', '); }
-        else                 { hsi.value = '';              sss.textContent = 'Select Subjects'; }
+        if (allSel)          { hsi.value = 'All Subjects'; }
+        else if (sel.length) { hsi.value = sel.join(', ');  }
+        else                 { hsi.value = '';              }
         const cnt = document.getElementById('liveSubjectCount');
         if (cnt) cnt.value = calcSubjectCount(hsi.value);
     }
