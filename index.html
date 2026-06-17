@@ -179,11 +179,10 @@
                 <input type="hidden" id="studentId">
                 <div class="form-group">
                     <label for="studentBatchName">Class</label>
-                    <input type="hidden" id="studentBatchName" required>
-                    <div class="custom-select" id="customBatchSelect">
-                        <div class="select-selected" id="selectSelected">Select a Class</div>
-                        <div class="select-items" id="selectItems"></div>
-                    </div>
+                    <select id="studentBatchName" class="native-select" required>
+                        <option value="" disabled selected>Select a Class</option>
+                        <!-- Options injected by JS -->
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="studentName">Student Name</label>

@@ -967,19 +967,10 @@ function setupEventListeners() {
     cancelModalBtn?.addEventListener('click', e => { e.preventDefault(); closeModal(); });
     studentForm?.addEventListener('submit', e => { e.preventDefault(); saveStudent(); });
 
-    // Custom selects toggle
-    const ss  = document.getElementById('selectSelected');
-    const si  = document.getElementById('selectItems');
-
-    ss?.addEventListener('click', e => {
-        e.stopPropagation();
-        if (document.getElementById('customBatchSelect')?.classList.contains('disabled')) return;
-        ss.classList.toggle('select-arrow-active');
-        si.style.display = si.style.display === 'block' ? 'none' : 'block';
-        if (si.style.display === 'none') ss.classList.remove('select-arrow-active');
+    // Handle Class selection change natively
+    document.getElementById('studentBatchName')?.addEventListener('change', function() {
+        populateSubjectDropdown(defaultSubjectsFor(this.value));
     });
-
-    document.addEventListener('click', () => window.closeCustomSelect?.());
 }
 
 function openLoginModal(role, title) {
@@ -1037,11 +1028,8 @@ function enterApp(role, userId) {
     renderBatches('');
     renderTable('');
 }
+// Custom selects removed
 
-window.closeCustomSelect = function() {
-    ['selectSelected'].forEach(id => document.getElementById(id)?.classList.remove('select-arrow-active'));
-    ['selectItems'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
-};
 
 function defaultSubjectsFor(batch) {
     if (batch.includes('Science'))  return "Physics, Chemistry, Maths";
@@ -1051,25 +1039,17 @@ function defaultSubjectsFor(batch) {
 }
 
 function populateBatchDropdown(selectedBatch) {
-    const si = document.getElementById('selectItems');
-    const ss = document.getElementById('selectSelected');
-    const hi = document.getElementById('studentBatchName');
-    si.innerHTML = '';
-    ss.textContent = selectedBatch || 'Select a Class';
-    hi.value = selectedBatch || '';
+    const select = document.getElementById('studentBatchName');
+    select.innerHTML = '<option value="" disabled>Select a Class</option>';
+    
     defaultBatches.forEach(batch => {
-        const item = document.createElement('div');
-        item.textContent = batch;
-        if (batch === selectedBatch) item.classList.add('same-as-selected');
-        item.addEventListener('click', function() {
-            hi.value = this.textContent;
-            ss.textContent = this.textContent;
-            Array.from(si.children).forEach(c => c.classList.remove('same-as-selected'));
-            this.classList.add('same-as-selected');
-            populateSubjectDropdown(defaultSubjectsFor(this.textContent));
-            window.closeCustomSelect();
-        });
-        si.appendChild(item);
+        const option = document.createElement('option');
+        option.value = batch;
+        option.textContent = batch;
+        if (batch === selectedBatch) {
+            option.selected = true;
+        }
+        select.appendChild(option);
     });
 }
 
@@ -1279,26 +1259,26 @@ function saveStudent() {
 
 function configureModalFields(role, isEdit) {
     const nameInput = document.getElementById('studentName');
-    const batchSelect = document.getElementById('customBatchSelect');
+    const batchSelect = document.getElementById('studentBatchName');
     const feesGroup = document.getElementById('feesPendingBtn')?.closest('.form-group');
 
     if (!nameInput || !batchSelect) return;
 
     // Reset fields to fully enabled state
     nameInput.disabled = false;
-    batchSelect.classList.remove('disabled');
+    batchSelect.disabled = false;
     if (feesGroup) feesGroup.style.display = 'block';
 
     if (role !== 'owner') {
         if (isEdit) {
             // Student or guest editing their own record
             nameInput.disabled = true;
-            batchSelect.classList.add('disabled');
+            batchSelect.disabled = true;
             if (feesGroup) feesGroup.style.display = 'none';
         } else {
             // Guest/New admission registering
             nameInput.disabled = false;
-            batchSelect.classList.remove('disabled');
+            batchSelect.disabled = false;
             if (feesGroup) feesGroup.style.display = 'none';
         }
     }
