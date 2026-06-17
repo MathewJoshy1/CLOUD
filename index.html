@@ -7,7 +7,15 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.error('SW Registration failed:', err));
+            });
+        }
+    </script>
 </head>
 <body>
 
@@ -71,6 +79,19 @@
 <!-- Main App -->
 <div class="app-container" id="mainAppContainer" style="display: none;">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions-bar" id="bulkActionsBar" style="display:none;">
+        <span id="bulkSelectedCount" style="font-weight:600; color:var(--primary);">0 selected</span>
+        <div class="bulk-actions">
+            <select id="bulkMoveSelect" class="native-select" style="padding:6px; font-size:14px; margin-right:8px;">
+                <option value="" disabled selected>Move to...</option>
+            </select>
+            <button class="btn-primary" id="bulkMoveBtn">Move</button>
+            <button class="btn-secondary" id="bulkDeleteBtn" style="color:var(--danger); border-color:var(--danger);"><i class="ph ph-trash"></i></button>
+        </div>
+        <button class="icon-btn" id="bulkCloseBtn" style="margin-left:10px;"><i class="ph ph-x"></i></button>
+    </div>
 
     <!-- Sidebar -->
     <aside class="sidebar">

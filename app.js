@@ -75,6 +75,18 @@ let pendingAdmissions = []; // Pending admissions requiring owner approval
 // ─── Sort state ───
 let sortCol   = null;   // column key or null
 let sortAsc   = true;
+let selectedStudents = [];
+
+function updateBulkActionBar() {
+    const bar = document.getElementById('bulkActionsBar');
+    if (!bar) return;
+    if (selectedStudents.length > 0) {
+        bar.style.display = 'flex';
+        document.getElementById('bulkSelectedCount').textContent = `${selectedStudents.length} selected`;
+    } else {
+        bar.style.display = 'none';
+    }
+}
 
 // ─── Init ───
 function init() {
@@ -573,8 +585,35 @@ function feesBadge(student) {
     return html;
 }
 
+function updateDashboard(students) {
+    const dash = document.getElementById('dashboardCards');
+    if (!dash) return;
+    if (currentUserRole !== 'owner') {
+        dash.style.display = 'none';
+        return;
+    }
+    dash.style.display = 'grid';
+    
+    const totalStudents = students.length;
+    let totalCollected = 0;
+    let totalPending = 0;
+
+    students.forEach(s => {
+        if (s.fees === 'Paid') {
+            totalCollected += parseInt(s.feesAmountPaid) || 0;
+            totalPending += parseInt(s.feesRemaining) || 0;
+        }
+    });
+
+    document.getElementById('dashTotalStudents').textContent = totalStudents;
+    document.getElementById('dashTotalCollected').textContent = '₹' + totalCollected.toLocaleString('en-IN');
+    document.getElementById('dashTotalPending').textContent = '₹' + totalPending.toLocaleString('en-IN');
+}
+
 // ─── Render Table ───
 function renderTable(searchTerm = "", inClassSearch = "") {
+    selectedStudents = [];
+    updateBulkActionBar();
     let students = [];
     let isAll = currentBatch === 'Home' || searchTerm.trim() !== "";
 
@@ -696,6 +735,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     };
 
     // Fees column visible to all; WhatsApp only to owner
+    const checkCol   = currentUserRole === 'owner' ? `<th class="col-check" style="width:40px;"><input type="checkbox" id="selectAllStudents"></th>` : '';
     const feesCol    = `<th class="sortable col-fees" data-col="fees">Fees ${sortIndicator('fees')}</th>`;
     const waCol      = currentUserRole === 'owner' ? `<th class="col-wa"></th>` : '';
     const actionsCol = `<th class="col-actions" style="text-align:right;">Actions</th>`;
@@ -708,9 +748,9 @@ function renderTable(searchTerm = "", inClassSearch = "") {
 
     let colCount = 7; // no, name, school, subjects, subCount, fees, actions
     if (isAll || currentBatch === '__recycle__') colCount++;
-    if (currentUserRole === 'owner') colCount++;
+    if (currentUserRole === 'owner') colCount += 2; // WA + Checkbox
 
-    tableHeaders.innerHTML = classCol + noCol + nameCol + schoolCol + subCol + subCntCol + feesCol + waCol + actionsCol;
+    tableHeaders.innerHTML = checkCol + classCol + noCol + nameCol + schoolCol + subCol + subCntCol + feesCol + waCol + actionsCol;
 
     // Attach sort click handlers
     tableHeaders.querySelectorAll('.sortable').forEach(th => {
@@ -744,6 +784,8 @@ function renderTable(searchTerm = "", inClassSearch = "") {
     studentsTableEl.style.display = 'table';
     emptyStateEl.style.display = 'none';
     studentsBodyEl.innerHTML = "";
+    
+    updateDashboard(students);
 
     students.forEach((student, idx) => {
         const batchForAction = isAll ? student.batchName : currentBatch;
@@ -789,6 +831,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             ? `<td class="col-class"><span class="class-badge">${student.batchName || student.deletedFrom}</span></td>`
             : '';
 
+        const checkCell = currentUserRole === 'owner' ? `<td class="col-check" onclick="event.stopPropagation()"><input type="checkbox" class="student-select" data-id="${student.id}" data-batch="${batchForAction}"></td>` : '';
         const feesCell = `<td class="col-fees">${feesBadge(student)}</td>`;
         const waCell   = currentUserRole === 'owner' ? `<td class="col-wa">${waBtn}</td>` : '';
 
@@ -798,6 +841,7 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         tr.style.cursor = currentUserRole === 'owner' ? 'pointer' : 'default';
         tr.className = 'main-student-row';
         tr.innerHTML = `
+            ${checkCell}
             ${classCell}
             <td class="col-no"><strong>${displayNo}</strong></td>
             <td class="col-name" style="font-weight: 600; color: var(--text-main);">${student.name}</td>
@@ -864,6 +908,37 @@ function renderTable(searchTerm = "", inClassSearch = "") {
             }, idx * 40);
         });
     });
+
+    // Bulk Select Listeners
+    if (currentUserRole === 'owner') {
+        const selectAllEl = document.getElementById('selectAllStudents');
+        if (selectAllEl) {
+            selectAllEl.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                document.querySelectorAll('.student-select').forEach(cb => cb.checked = isChecked);
+                if (isChecked) {
+                    selectedStudents = Array.from(document.querySelectorAll('.student-select')).map(cb => ({
+                        id: cb.dataset.id, batch: cb.dataset.batch
+                    }));
+                } else {
+                    selectedStudents = [];
+                }
+                updateBulkActionBar();
+            });
+        }
+
+        document.querySelectorAll('.student-select').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    selectedStudents.push({ id: cb.dataset.id, batch: cb.dataset.batch });
+                } else {
+                    selectedStudents = selectedStudents.filter(s => s.id !== cb.dataset.id);
+                    if (selectAllEl) selectAllEl.checked = false;
+                }
+                updateBulkActionBar();
+            });
+        });
+    }
 
     // Render Student Dashboard Widgets
     const dashContainer = document.getElementById('studentDashboardWidgets');
@@ -1027,6 +1102,8 @@ function enterApp(role, userId) {
     // Print button visible only for owner
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.style.display = role === 'owner' ? 'flex' : 'none';
+    const exportBtn = document.getElementById('exportCsvBtn');
+    if (exportBtn) exportBtn.style.display = role === 'owner' ? 'flex' : 'none';
     renderBatches('');
     renderTable('');
 }
@@ -1160,11 +1237,11 @@ function populateSubjectDropdown(subjectString) {
         // Re-render dropdown keeping current selections + new subject checked
         const currentlyChecked = Array.from(ssi.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value);
         currentlyChecked.push(formatted);
+        const scrollPos = ssi.scrollTop;
         populateSubjectDropdown(currentlyChecked.join(', '));
+        ssi.scrollTop = scrollPos;
+        
         // Re-open the dropdown
-        ssi.style.display = 'block';
-        const sssEl = document.getElementById('subjectSelectSelected');
-        if (sssEl) sssEl.classList.add('select-arrow-active');
         showToast(`"${formatted}" added to subjects!`, "success");
     };
 
@@ -1209,6 +1286,8 @@ function saveStudent() {
     }
 
     const subjects = document.getElementById('studentSubjects').value;
+    if (!subjects) { showToast("Please select at least one subject.", "error"); return; }
+    
     const manualSubCount = parseInt(document.getElementById('liveSubjectCount')?.value, 10) || 0;
     const fees     = document.getElementById('studentFees')?.value || 'Pending';
     const feesAmountPaid = fees === 'Paid' ? (document.getElementById('feesAmountPaid')?.value || '') : '';
@@ -1680,6 +1759,107 @@ function printCurrentView() {
 </body></html>`);
     win.document.close();
 }
+
+// ─── Export CSV ───
+function exportToCSV() {
+    let studentsToExport = [];
+    if (currentBatch === 'Home') {
+        Object.values(studentsData).forEach(batch => studentsToExport.push(...batch));
+    } else if (studentsData[currentBatch]) {
+        studentsToExport = studentsData[currentBatch];
+    }
+
+    if (studentsToExport.length === 0) {
+        showToast("No data to export.", "error");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Class,No.,Name,School,Subjects,Contact,Fees Status,Amount Paid,Date Paid,Remaining\n";
+
+    studentsToExport.forEach(s => {
+        let cleanSub = (s.subjects || '-').replace(/\(\d+\)/g,'').trim() || '-';
+        let row = [
+            `"${s.batchName || ''}"`,
+            `"${s.no || ''}"`,
+            `"${s.name || ''}"`,
+            `"${s.schoolName || ''}"`,
+            `"${cleanSub}"`,
+            `"${s.contact || ''}"`,
+            `"${s.fees || 'Pending'}"`,
+            `"${s.feesAmountPaid || ''}"`,
+            `"${s.feesDatePaid || ''}"`,
+            `"${s.feesRemaining || ''}"`
+        ];
+        csvContent += row.join(",") + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const safeBatch = currentBatch === 'Home' ? 'All' : currentBatch;
+    link.setAttribute("download", `Students_Export_${safeBatch}_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+document.getElementById('exportCsvBtn')?.addEventListener('click', exportToCSV);
+
+// ─── Bulk Actions ───
+document.getElementById('bulkCloseBtn')?.addEventListener('click', () => {
+    selectedStudents = [];
+    document.querySelectorAll('.student-select').forEach(cb => cb.checked = false);
+    const selectAllEl = document.getElementById('selectAllStudents');
+    if (selectAllEl) selectAllEl.checked = false;
+    updateBulkActionBar();
+});
+
+document.getElementById('bulkMoveBtn')?.addEventListener('click', () => {
+    const targetBatch = document.getElementById('bulkMoveSelect').value;
+    if (!targetBatch) { showToast("Select a class to move to", "error"); return; }
+    
+    selectedStudents.forEach(sel => {
+        const batchArray = studentsData[sel.batch];
+        if (!batchArray) return;
+        const studentIdx = batchArray.findIndex(s => s.id === sel.id);
+        if (studentIdx >= 0) {
+            const student = batchArray.splice(studentIdx, 1)[0];
+            student.batchName = targetBatch;
+            if (!studentsData[targetBatch]) studentsData[targetBatch] = [];
+            studentsData[targetBatch].push(student);
+        }
+    });
+    
+    saveToFirebase();
+    showToast(`Moved ${selectedStudents.length} students to ${targetBatch}`, "success");
+    selectedStudents = [];
+    updateBulkActionBar();
+    renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+});
+
+document.getElementById('bulkDeleteBtn')?.addEventListener('click', () => {
+    if (!confirm(`Are you sure you want to delete ${selectedStudents.length} students?`)) return;
+    
+    selectedStudents.forEach(sel => {
+        const batchArray = studentsData[sel.batch];
+        if (!batchArray) return;
+        const studentIdx = batchArray.findIndex(s => s.id === sel.id);
+        if (studentIdx >= 0) {
+            const student = batchArray.splice(studentIdx, 1)[0];
+            student.deletedFrom = sel.batch;
+            student.deletedAt = new Date().toISOString();
+            if (!studentsData['__recycle__']) studentsData['__recycle__'] = [];
+            studentsData['__recycle__'].push(student);
+        }
+    });
+    
+    saveToFirebase();
+    showToast(`Deleted ${selectedStudents.length} students.`, "success");
+    selectedStudents = [];
+    updateBulkActionBar();
+    renderTable(batchSearchEl?.value || '', document.getElementById('tableSearch')?.value || '');
+});
 
 function saveToFirebase() { set(ref(db, 'studentsData'), studentsData); }
 
