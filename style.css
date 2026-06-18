@@ -1142,6 +1142,10 @@ tbody tr:hover {
         text-align: left;
     }
 
+    #studentsTable td.empty-val {
+        display: none !important;
+    }
+
     /* Child columns styling */
     .col-class {
         border-bottom: 1px dashed var(--border-color) !important;
@@ -1207,6 +1211,31 @@ tbody tr:hover {
     }
     .col-fees::before {
         content: "Fees Status";
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    .col-fees-paid {
+        flex-direction: row;
+        justify-content: space-between;
+        padding-top: 8px !important;
+    }
+    .col-fees-paid::before {
+        content: "Amount Paid";
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    .col-fees-pending {
+        flex-direction: row;
+        justify-content: space-between;
+        padding-top: 8px !important;
+        border-bottom: 1px dashed var(--border-color) !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 8px !important;
+    }
+    .col-fees-pending::before {
+        content: "Pending Fees";
         font-weight: 600;
         color: var(--text-muted);
     }

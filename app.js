@@ -1065,16 +1065,18 @@ function renderFeesTable() {
 
         let paidText = '';
         let pendingText = '';
+        let hasPaid = false;
+        let hasPending = false;
         if (student.fees === 'Paid') {
-            if (student.feesAmountPaid) paidText = `₹${parseInt(student.feesAmountPaid).toLocaleString('en-IN')}`;
-            if (student.feesRemaining && parseInt(student.feesRemaining) > 0) pendingText = `₹${parseInt(student.feesRemaining).toLocaleString('en-IN')}`;
+            if (student.feesAmountPaid) { paidText = `₹${parseInt(student.feesAmountPaid).toLocaleString('en-IN')}`; hasPaid = true; }
+            if (student.feesRemaining && parseInt(student.feesRemaining) > 0) { pendingText = `₹${parseInt(student.feesRemaining).toLocaleString('en-IN')}`; hasPending = true; }
         }
 
         tr.innerHTML = `
             <td class="col-class"><span class="class-badge">${student.batchName}</span></td>
             <td class="col-name" style="font-weight: 600; color: var(--text-main);">${student.name}</td>
-            <td class="col-fees-paid text-success">${paidText}</td>
-            <td class="col-fees-pending text-danger">${pendingText}</td>
+            <td class="col-fees-paid text-success ${hasPaid ? '' : 'empty-val'}">${paidText}</td>
+            <td class="col-fees-pending text-danger ${hasPending ? '' : 'empty-val'}">${pendingText}</td>
             <td class="col-actions" style="text-align: right;" onclick="event.stopPropagation()">
                 <button class="icon-btn edit" onclick="editFees('${student.id}','${student.batchName}')" title="Edit Fees"><i class="ph ph-pencil-simple"></i></button>
             </td>
