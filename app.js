@@ -1448,9 +1448,14 @@ function saveStudent() {
     if (!studentsData[newBatch]) studentsData[newBatch] = [];
 
     let oldBatch = null, oldNo = null;
+    let existingStudent = {};
     Object.keys(studentsData).forEach(b => {
         const idx = studentsData[b].findIndex(s => s.id === id);
-        if (idx >= 0) { oldBatch = b; oldNo = studentsData[b][idx].no; studentsData[b].splice(idx, 1); }
+        if (idx >= 0) { 
+            oldBatch = b; 
+            oldNo = studentsData[b][idx].no; 
+            existingStudent = studentsData[b].splice(idx, 1)[0]; 
+        }
     });
 
     let no = oldNo || 1;
@@ -1458,7 +1463,7 @@ function saveStudent() {
         no = studentsData[newBatch].length > 0 ? Math.max(...studentsData[newBatch].map(s => s.no)) + 1 : 1;
     }
 
-    studentsData[newBatch].push({ id, no, name, schoolName, subjects, subjectCount: manualSubCount, contact, fees, feesAmountPaid, feesDatePaid, feesRemaining });
+    studentsData[newBatch].push({ ...existingStudent, id, no, name, schoolName, subjects, subjectCount: manualSubCount, contact, fees, feesAmountPaid, feesDatePaid, feesRemaining });
     saveToFirebase();
     closeModal();
     showToast(oldBatch ? "Student updated!" : "Student added!", "success");
@@ -1757,7 +1762,7 @@ window.renderDocsDirect = function(batch, studentId, containerId) {
                     <div style="font-size: 12px; color: var(--text-muted);">${dateStr}</div>
                 </div>
                 <div style="display: flex; gap: 8px; margin-left: 12px;">
-                    <a href="${d.url}" download="${d.title}" class="icon-btn" style="color: var(--primary);" title="Download"><i class="ph ph-download-simple"></i></a>
+                    <a href="${d.url}" download="${d.title}" target="_blank" class="icon-btn" style="color: var(--primary);" title="Download"><i class="ph ph-download-simple"></i></a>
                     ${delBtn}
                 </div>
             </div>
@@ -1958,9 +1963,12 @@ function printCurrentView() {
 function exportToCSV() {
     let studentsToExport = [];
     if (currentBatch === 'Home') {
-        Object.values(studentsData).forEach(batch => studentsToExport.push(...batch));
+        Object.keys(studentsData).forEach(batch => {
+            if (batch === '__recycle__' || batch === '__pending__') return;
+            studentsData[batch].forEach(s => studentsToExport.push({...s, batchName: batch}));
+        });
     } else if (studentsData[currentBatch]) {
-        studentsToExport = studentsData[currentBatch];
+        studentsData[currentBatch].forEach(s => studentsToExport.push({...s, batchName: currentBatch}));
     }
 
     if (studentsToExport.length === 0) {
@@ -1968,35 +1976,46 @@ function exportToCSV() {
         return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Class,No.,Name,School,Subjects,Contact,Fees Status,Amount Paid,Date Paid,Remaining\n";
+    let csvContent = "Class,No.,Name,School,Subjects,Contact,Fees Status,Amount Paid,Date Paid,Remaining\n";
+
+    // Helper to safely escape CSV values
+    const escapeCsv = (val) => {
+        if (val == null) return '""';
+        const str = String(val);
+        if (/[",\n]/.test(str)) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return `"${str}"`;
+    };
 
     studentsToExport.forEach(s => {
         let cleanSub = (s.subjects || '-').replace(/\(\d+\)/g,'').trim() || '-';
         let row = [
-            `"${s.batchName || ''}"`,
-            `"${s.no || ''}"`,
-            `"${s.name || ''}"`,
-            `"${s.schoolName || ''}"`,
-            `"${cleanSub}"`,
-            `"${s.contact || ''}"`,
-            `"${s.fees || 'Pending'}"`,
-            `"${s.feesAmountPaid || ''}"`,
-            `"${s.feesDatePaid || ''}"`,
-            `"${s.feesRemaining || ''}"`
+            escapeCsv(s.batchName),
+            escapeCsv(s.no),
+            escapeCsv(s.name),
+            escapeCsv(s.schoolName),
+            escapeCsv(cleanSub),
+            escapeCsv(s.contact),
+            escapeCsv(s.fees || 'Pending'),
+            escapeCsv(s.feesAmountPaid),
+            escapeCsv(s.feesDatePaid),
+            escapeCsv(s.feesRemaining)
         ];
         csvContent += row.join(",") + "\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     const dateStr = new Date().toISOString().split('T')[0];
     const safeBatch = currentBatch === 'Home' ? 'All' : currentBatch;
     link.setAttribute("download", `Students_Export_${safeBatch}_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 document.getElementById('exportCsvBtn')?.addEventListener('click', exportToCSV);
 
@@ -2043,10 +2062,11 @@ document.getElementById('bulkDeleteBtn')?.addEventListener('click', () => {
             const student = batchArray.splice(studentIdx, 1)[0];
             student.deletedFrom = sel.batch;
             student.deletedAt = new Date().toISOString();
-            if (!studentsData['__recycle__']) studentsData['__recycle__'] = [];
-            studentsData['__recycle__'].push(student);
+            recycleBin.push(student);
         }
     });
+    
+    set(ref(db, 'recycleBin'), recycleBin);
     
     saveToFirebase();
     showToast(`Deleted ${selectedStudents.length} students.`, "success");
