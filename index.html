@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="border-glow.css">
     <link rel="manifest" href="manifest.json">
     <script>
         if ('serviceWorker' in navigator) {
@@ -36,17 +37,17 @@
             <p>Welcome. Please select your role to continue.</p>
         </div>
         <div class="role-cards">
-            <div class="role-card" id="roleStudentBtn">
+            <div class="role-card glow-effect" id="roleStudentBtn">
                 <i class="ph ph-student"></i>
                 <h3>STUDENT</h3>
                 <p>View your personal profile</p>
             </div>
-            <div class="role-card" id="roleGuestBtn">
+            <div class="role-card glow-effect" id="roleGuestBtn">
                 <i class="ph ph-user-plus"></i>
                 <h3>NEW ADMISSION</h3>
                 <p>New admission registration</p>
             </div>
-            <div class="role-card" id="roleOwnerBtn">
+            <div class="role-card glow-effect" id="roleOwnerBtn">
                 <i class="ph ph-crown"></i>
                 <h3>OWNER</h3>
                 <p>Administrator access</p>
@@ -57,7 +58,7 @@
 
 <!-- Login Modal -->
 <div class="portal-modal" id="loginModal">
-    <div class="portal-modal-content">
+    <div class="portal-modal-content glow-effect">
         <h2 id="loginModalTitle">Login</h2>
         <form id="loginForm">
             <div class="form-group">
@@ -119,6 +120,9 @@
                 <span class="student-count" id="studentCount">0 Students</span>
             </div>
             <div class="header-right">
+                <button class="btn-secondary" id="exportCsvBtn" style="display:none;">
+                    <i class="ph ph-download-simple"></i> Export CSV
+                </button>
                 <button class="btn-secondary" id="printBtn" style="display:none;">
                     <i class="ph ph-printer"></i> Print / PDF
                 </button>
@@ -137,11 +141,11 @@
 
             <div class="stats-container" id="statsContainer" style="display: none; flex-direction: column; gap: 20px;">
                 <div style="display: flex; gap: 16px; width: 100%;">
-                    <div class="stat-box" style="flex: 1;">
+                    <div class="stat-box glow-effect" style="flex: 1;">
                         <span class="stat-label">Total Students:</span>
                         <span class="stat-value animate-pulse" id="statTotalStudents">0</span>
                     </div>
-                    <div class="stat-box" style="flex: 1;">
+                    <div class="stat-box glow-effect" style="flex: 1;">
                         <span class="stat-label">Total Subjects:</span>
                         <span class="stat-value animate-pulse" id="statTotalSubjects">0</span>
                     </div>
@@ -151,11 +155,11 @@
             <!-- Fees Dashboard -->
             <div class="stats-container" id="feesStatsContainer" style="display: none; flex-direction: column; gap: 20px;">
                 <div style="display: flex; gap: 16px; width: 100%;">
-                    <div class="stat-box" style="flex: 1; border-left: 4px solid #10b981;">
+                    <div class="stat-box glow-effect" style="flex: 1; border-left: 4px solid #10b981;">
                         <span class="stat-label">FEES RECEIVED:</span>
                         <span class="stat-value text-success" id="feesTotalReceived">₹0</span>
                     </div>
-                    <div class="stat-box" style="flex: 1; border-left: 4px solid #ef4444;">
+                    <div class="stat-box glow-effect" style="flex: 1; border-left: 4px solid #ef4444;">
                         <span class="stat-label">FEES PENDING:</span>
                         <span class="stat-value text-danger" id="feesTotalPending">₹0</span>
                     </div>
@@ -203,7 +207,7 @@
 
 <!-- Edit Fees Modal -->
 <div class="modal-overlay" id="editFeesModal">
-    <div class="modal" style="max-width: 400px;">
+    <div class="modal glow-effect" style="max-width: 400px;">
         <button class="close-modal-btn" id="closeFeesModalBtn"><i class="ph ph-x"></i></button>
         <div class="modal-header">
             <h2 style="font-size: 20px;"><i class="ph ph-currency-inr" style="color:var(--primary); margin-right:8px;"></i> Edit Fees</h2>
@@ -235,7 +239,7 @@
 
 <!-- Add/Edit Student Modal -->
 <div class="modal-overlay" id="studentModal">
-    <div class="modal">
+    <div class="modal glow-effect">
         <div class="modal-header">
             <h3 id="modalTitle">Add New Student</h3>
             <button class="close-btn" id="closeModalBtn"><i class="ph ph-x"></i></button>
@@ -314,7 +318,7 @@
 
 <!-- Custom Confirm Dialog -->
 <div class="confirm-overlay" id="confirmOverlay">
-    <div class="confirm-box">
+    <div class="confirm-box glow-effect">
         <div class="confirm-icon" id="confirmIcon"><i class="ph ph-question"></i></div>
         <h3 class="confirm-title" id="confirmTitle">Are you sure?</h3>
         <p class="confirm-msg" id="confirmMsg"></p>

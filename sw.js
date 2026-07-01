@@ -1,11 +1,13 @@
-const CACHE_NAME = 'christ-study-v3';
+const CACHE_NAME = 'christ-study-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
   '/config.js',
-  '/favicon.png'
+  '/favicon.png',
+  '/border-glow.css',
+  '/border-glow.js'
 ];
 
 self.addEventListener('install', (event) => {

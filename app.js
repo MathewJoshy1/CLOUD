@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { firebaseConfig, OWNER_NAMES, OWNER_PASS_HASH, hashPassword, OWNER_WHATSAPP_NUMBER } from './config.js?v=2';
+import { initBorderGlow } from './border-glow.js';
 
 const batchGroups = [
     { title: "CBSE",  batches: ["12 CBSE", "11 CBSE", "10 CBSE", "9 CBSE", "8 CBSE", "7 CBSE", "6 CBSE", "5 CBSE", "4 CBSE", "3 CBSE", "2 CBSE", "1 CBSE"] },
@@ -91,6 +92,11 @@ function updateBulkActionBar() {
 // ─── Init ───
 function init() {
     setupEventListeners();
+
+    // Initialize BorderGlow on static UI elements
+    document.querySelectorAll('.glow-effect').forEach(el => {
+        initBorderGlow(el);
+    });
 
     // Load custom subjects from Firebase
     const subjectsRef = ref(db, 'customSubjects');
@@ -866,8 +872,17 @@ function renderTable(searchTerm = "", inClassSearch = "") {
         let cleanContact = student.contact ? student.contact.replace(/\D/g, '') : '';
         if (cleanContact.length === 10) cleanContact = '91' + cleanContact;
         
+        let waMessage = '';
+        if (student.fees === 'Pending') {
+            waMessage = encodeURIComponent(`Hello ${student.name},\nThis is a gentle reminder from Christ Study Centre that your fees are currently pending. Please arrange to pay them at your earliest convenience.\nThank you.`);
+        } else if (student.fees === 'Paid' && student.feesRemaining && parseInt(student.feesRemaining) > 0) {
+            waMessage = encodeURIComponent(`Hello ${student.name},\nThis is a gentle reminder from Christ Study Centre that a fee balance of ₹${parseInt(student.feesRemaining).toLocaleString('en-IN')} is currently pending.\nPlease arrange to pay at your earliest convenience.\nThank you.`);
+        } else {
+            waMessage = encodeURIComponent(`Hello ${student.name},\nGreetings from Christ Study Centre!`);
+        }
+
         const waBtn = currentUserRole === 'owner' && cleanContact
-            ? `<a href="https://wa.me/${cleanContact}" target="_blank" class="icon-btn whatsapp" title="WhatsApp ${student.name}"><i class="ph ph-whatsapp-logo"></i></a>`
+            ? `<a href="https://wa.me/${cleanContact}?text=${waMessage}" target="_blank" class="icon-btn whatsapp" title="WhatsApp ${student.name}"><i class="ph ph-whatsapp-logo"></i></a>`
             : (currentUserRole === 'owner' ? `<span style="color:var(--text-muted);font-size:12px;">—</span>` : '');
 
         const classCell = (isAll || currentBatch === '__recycle__')
@@ -1095,7 +1110,7 @@ function renderFeesTable() {
 }
 
 // ─── Event Listeners ───
-setupEventListeners();
+
 function setupEventListeners() {
     // Role cards
     roleStudentBtn?.addEventListener('click', () => openLoginModal('student', 'Student Login'));
@@ -1145,6 +1160,10 @@ function setupEventListeners() {
     // Print / PDF button
     const printBtn = document.getElementById('printBtn');
     printBtn?.addEventListener('click', () => printCurrentView());
+
+    // Export CSV button
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    exportCsvBtn?.addEventListener('click', () => exportCSV());
 
     // Add student button
     addStudentBtn?.addEventListener('click', () => {
@@ -1876,6 +1895,45 @@ window.rejectAdmission = async function(id) {
 function generateId()  { return Math.random().toString(36).substring(2, 11); }
 
 // ─── Print / PDF ───
+function exportCSV() {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Class,No.,Name,School,Subjects,Total Subjects,Contact,Fees Status,Amount Paid,Date Paid,Remaining Fee\n";
+
+    let studentsToExport = [];
+    if (currentBatch === 'All' || currentBatch === 'Home') {
+        Object.keys(studentsData).forEach(bn => {
+            studentsData[bn].forEach(s => studentsToExport.push({...s, batchName: bn}));
+        });
+    } else if (studentsData[currentBatch]) {
+        studentsToExport = studentsData[currentBatch].map(s => ({...s, batchName: currentBatch}));
+    }
+
+    studentsToExport.forEach(student => {
+        let row = [
+            `"${student.batchName || currentBatch}"`,
+            student.no || '',
+            `"${student.name || ''}"`,
+            `"${student.schoolName || ''}"`,
+            `"${(student.subjects || '').replace(/"/g, '""')}"`,
+            student.subjectCount !== undefined ? student.subjectCount : calcSubjectCount(student.subjects),
+            `"${student.contact || ''}"`,
+            `"${student.fees || 'Pending'}"`,
+            student.feesAmountPaid || '',
+            `"${student.feesDatePaid || ''}"`,
+            student.feesRemaining || ''
+        ];
+        csvContent += row.join(",") + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Christ_Study_Centre_${currentBatch.replace(/\s+/g, '_')}_Students.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 function printCurrentView() {
     const isHome = currentBatch === 'Home';
     const title  = isHome ? 'Christ Study Centre — All Students' : `Christ Study Centre — ${currentBatch}`;
