@@ -14,7 +14,6 @@
   isolation: isolate;
   transform: translate3d(0, 0, 0.01px);
   border: 1px solid var(--border-color, rgb(255 255 255 / 15%));
-  background: var(--card-bg, var(--bg-card));
   overflow: visible;
   box-shadow: var(--shadow-md);
 }
@@ -33,7 +32,7 @@
 .border-glow-card:not(:hover):not(.sweep-active)::before,
 .border-glow-card:not(:hover):not(.sweep-active)::after,
 .border-glow-card:not(:hover):not(.sweep-active) > .edge-light {
-  opacity: 0.5; /* Always show a bit of glow */
+  opacity: 0 !important;
   transition: opacity 0.75s ease-in-out;
 }
 
@@ -41,8 +40,6 @@
 .border-glow-card::before {
   border: 1px solid transparent;
   background:
-    linear-gradient(var(--card-bg, var(--bg-card)) 0 100%) padding-box,
-    linear-gradient(rgb(255 255 255 / 0%) 0% 100%) border-box,
     var(--gradient-one, radial-gradient(at 80% 55%, hsla(268, 100%, 76%, 1) 0px, transparent 50%)) border-box,
     var(--gradient-two, radial-gradient(at 69% 34%, hsla(349, 100%, 74%, 1) 0px, transparent 50%)) border-box,
     var(--gradient-three, radial-gradient(at 8% 6%, hsla(136, 100%, 78%, 1) 0px, transparent 50%)) border-box,
@@ -54,22 +51,28 @@
 
   opacity: max(0.4, calc((var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity))));
 
-  mask-image:
+  mask:
+    linear-gradient(#fff 0 0) padding-box,
     conic-gradient(
       from var(--cursor-angle) at center,
       black calc(var(--cone-spread) * 1%),
       transparent calc((var(--cone-spread) + 15) * 1%),
       transparent calc((100 - var(--cone-spread) - 15) * 1%),
       black calc((100 - var(--cone-spread)) * 1%)
-    );
-  -webkit-mask-image:
+    ) border-box;
+  
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
     conic-gradient(
       from var(--cursor-angle) at center,
       black calc(var(--cone-spread) * 1%),
       transparent calc((var(--cone-spread) + 15) * 1%),
       transparent calc((100 - var(--cone-spread) - 15) * 1%),
       black calc((100 - var(--cone-spread)) * 1%)
-    );
+    ) border-box;
+
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
 }
 
 /* colored mesh-gradient background fill near edges */
